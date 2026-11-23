@@ -359,7 +359,7 @@ const FORM = [
     {k:'seenMode',t:'check',l:'Tiles come back a different colour once they have been opened'},
     {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
-    {k:'holdLock',t:'check',l:'Kiosk lock: reset and settings need a 1-second press-and-hold'},
+    {k:'holdLock',t:'check',l:'Kiosk lock: in-game reset and settings also need a 1-second press-and-hold'},
     {k:'sound',t:'check',l:'Sound effects'},
     {k:'confetti',t:'check',l:'Confetti'},
     {k:'showStats',t:'check',l:'Show matches / turns counters'},
@@ -547,18 +547,20 @@ $('#bAgain').onclick = ()=>{ $('#ovEnd').classList.remove('on'); newGame(); };
 $('#bPlay').onclick  = ()=>{ $('#start').classList.add('off'); tone([523,784],.1); newGame(); };
 
 /* ---------- host controls ----------
-   A plain tap works by default. With "Kiosk lock" on, they need a 1-second hold. */
+   In-game buttons: a plain tap by default, a 1-second hold with "Kiosk lock" on.
+   Start-screen settings button: always a 1-second hold. */
 let toastT; function toast(t){ const e=$('#toast'); e.textContent=t; e.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>e.classList.remove('on'),1800); }
-function press(b,fn){ let t=0, fired=false;
+function press(b,fn,always){ let t=0, fired=false;
+  const locked=()=>always||CFG.holdLock;
   const stop=()=>{ clearTimeout(t); t=0; b.classList.remove('holding'); };
   b.addEventListener('pointerdown',e=>{
-    fired=false; if(!CFG.holdLock) return;
+    fired=false; if(!locked()) return;
     try{ b.setPointerCapture(e.pointerId); }catch(_){}
     b.classList.add('holding'); t=setTimeout(()=>{ stop(); fired=true; fn(); },800);
   });
   ['pointerup','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
   b.addEventListener('click',()=>{
-    if(!CFG.holdLock) return fn();
+    if(!locked()) return fn();
     if(!fired) toast('Press and hold for 1 second');
   });
 }
@@ -571,7 +573,7 @@ $('#rHome').onclick    = home;
 $('#rCancel').onclick  = rClose;
 press($('#bHome'),resetMenu);
 press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')));
-press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); });
+press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);   // start screen faces the audience: always a hold
 document.addEventListener('contextmenu',e=>{ if(!e.target.closest('.adm')) e.preventDefault(); });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 

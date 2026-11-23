@@ -13,7 +13,8 @@ no server and no external assets.
 
 ## Controls
 
-- **Settings** (sliders button, top right): opens the admin panel.
+- **Settings** (sliders button, top right): opens the admin panel. On the start screen it needs a
+  1-second press-and-hold; in the game it is a single tap.
 - **Reset** (circular arrow): flip all tiles back, reshuffle a new round, or return to the start screen.
 - **Fullscreen** (corner brackets).
 
