@@ -123,10 +123,10 @@ http.createServer((req, res) => {
     return readJson(req, (err, b) => {
       const n = v => Number.isFinite(v) && v >= 0 && v < 1e6;
       if (err || !b || ![b.turns, b.secs, b.cols, b.rows, b.pairs].every(n)) return json(res, 400, { error: 'invalid score' });
-      const sc = { ts: Date.now(), turns: b.turns | 0, secs: b.secs | 0, cols: b.cols | 0, rows: b.rows | 0, pairs: b.pairs | 0, sur: b.sur | 0, dev: str(b.dev, 8) };
+      const sc = { ts: Date.now(), turns: b.turns | 0, secs: b.secs | 0, cols: b.cols | 0, rows: b.rows | 0, pairs: b.pairs | 0, sur: b.sur | 0, dev: str(b.dev, 8), name: str(b.name, 16).trim() };
       scores = scores.concat([sc]).slice(-MAX_SCORES);
       saveSoon(SCORE_FILE, () => scores); broadcast('scores', { scores });
-      slog('score', sc.turns + ' turns · ' + sc.secs + 's · ' + sc.cols + '×' + sc.rows + ' from ' + sc.dev);
+      slog('score', (sc.name ? sc.name + ' · ' : '') + sc.turns + ' turns · ' + sc.secs + 's · ' + sc.cols + '×' + sc.rows + ' from ' + sc.dev);
       json(res, 200, { ok: true });
     });
   }

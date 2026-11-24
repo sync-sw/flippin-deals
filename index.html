@@ -44,6 +44,19 @@
   .toast.on{opacity:1}
   .menu{display:grid;gap:12px;margin-top:3vmin}
   .menu .cta{margin:0;width:100%}
+  /* name entry on the end screen, with its own keyboard so it works on any touchscreen */
+  .nmbox{margin:14px auto 12px;min-height:72px;max-width:560px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 3px var(--blue);display:flex;align-items:center;justify-content:center;
+    font-size:38px;font-weight:800;letter-spacing:.04em;padding:8px 16px;white-space:pre}
+  .nmbox.empty{color:#9aa3b5;font-weight:600;font-size:24px;letter-spacing:0}
+  .nmbox:not(.empty)::after{content:"";width:3px;height:40px;background:var(--blue);margin-left:4px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .kb{display:grid;gap:7px;max-width:640px;margin:0 auto}
+  .kb .r{display:flex;gap:7px;justify-content:center}
+  .kb button{flex:1 1 0;min-width:0;height:62px;border-radius:12px;background:#0a1036;color:#fff;font-size:24px;font-weight:700}
+  .kb button:active{background:var(--blue);transform:scale(.94)}
+  .kb button.w{flex:3 1 0}.kb button.m{flex:1.6 1 0;background:#3b4468}
+  .two{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .cta.alt{background:#fff;color:#0a1036;box-shadow:inset 0 0 0 2px #0a1036}
   .menu .cta.alt{background:#fff;color:#0a1036;box-shadow:inset 0 0 0 2px #0a1036}
   .ibtn .fill{position:absolute;inset:0;background:var(--blue);transform:scaleY(0);transform-origin:bottom}
   .ibtn.holding .fill{transform:scaleY(1);transition:transform .8s linear}
@@ -55,8 +68,8 @@
   /* instruction line above the board; it keeps its space after the first match so the board does not jump */
   .hint{zoom:var(--ui);flex:none;text-align:center;font-size:clamp(14px,2.4vmin,26px);font-weight:700;color:#c9d2f2;padding:0 0 var(--pad)}
   .hint.gone{visibility:hidden}
-  .stage{flex:1;min-height:0;display:grid;justify-items:center;align-items:start}
-  .board{display:grid;gap:var(--gap);padding:max(var(--gap),6px);border-radius:clamp(12px,2vmin,24px);
+  .stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+  .board{flex:none;display:grid;gap:var(--gap);padding:max(var(--gap),6px);border-radius:clamp(12px,2vmin,24px);
     background:linear-gradient(160deg,color-mix(in srgb,var(--frame) 70%,#fff),color-mix(in srgb,var(--frame) 80%,#000));
     box-shadow:0 20px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.5)}
   .card{position:relative;perspective:900px;border-radius:var(--rad)}
@@ -85,7 +98,7 @@
   .card.done .front.sur{box-shadow:inset 0 0 0 calc(var(--cs)*.03) #fff;opacity:.85}
   .card.done::after{content:"✓";position:absolute;right:-3%;top:-3%;width:calc(var(--cs)*.26);height:calc(var(--cs)*.26);border-radius:50%;background:#19c37d;color:#fff;
     display:grid;place-items:center;font-size:calc(var(--ts)*var(--cs)*.16);font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,.4);animation:pop .35s both}
-  .card.sdone::after{content:"★";background:var(--gold);color:#0a1036}
+  .card.sdone::after{display:none}       /* the gold tile already says it is a surprise */
   .card.shake .inner{animation:shake .4s var(--flip)}
   @keyframes shake{25%{translate:-5% 0}50%{translate:5% 0}75%{translate:-3% 0}}
   @keyframes pop{from{scale:0}70%{scale:1.25}to{scale:1}}
@@ -211,8 +224,7 @@
     <button class="ibtn" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="bHome" aria-label="Reset"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg></button>
   </header>
-  <div class="hint" id="hint"></div>
-  <div class="stage" id="stage"><div class="board" id="board"></div></div>
+  <div class="stage" id="stage"><div class="hint" id="hint"></div><div class="board" id="board"></div></div>
   <div class="tray" id="tray"></div>
 </div>
 
@@ -237,9 +249,17 @@
 <div class="ov" id="ovEnd"><div class="panel">
   <span class="tag">Board cleared</span>
   <h2>All deals unlocked in <span id="eTurns"></span> turns</h2>
-  <p>Every Black Friday offer from this round:</p>
-  <div class="sumlist" id="eList"></div>
-  <button class="cta" id="bAgain">Play again</button>
+  <div id="eName">
+    <p>Add your name to the high scores</p>
+    <div class="nmbox empty" id="eNameBox">Tap the letters below</div>
+    <div class="kb" id="eKb"></div>
+    <div class="two"><button class="cta" id="eSave">Save my score</button><button class="cta alt" id="eSkip">Skip</button></div>
+  </div>
+  <div id="eRest">
+    <p>Every Black Friday offer from this round:</p>
+    <div class="sumlist" id="eList"></div>
+    <button class="cta" id="bAgain">Play again</button>
+  </div>
 </div></div>
 
 <div class="ov" id="ovReset"><div class="panel">
@@ -255,6 +275,7 @@
 <div class="toast" id="toast"></div>
 
 <div class="start" id="start">
+  <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <img class="slogo hide" id="sLogo" alt="">
   <small id="stKicker"></small>
   <h1 id="stTitle"></h1>
@@ -321,7 +342,7 @@ const DEFAULTS = {
   c1:'#2447f0', c1on:true, c2:'#0a0f2a', c2on:true, c3:'#d9dee8', c3on:true,
   logo:'', logoBacks:false, logoHeader:true,
   flipMs:500, mismatchMs:1100, seenMode:false, seenColor:'#6b7390', autoClose:0,
-  holdLock:false, hideBtns:false, sound:true, volume:70, confetti:true, showStats:true, showTray:true,
+  holdLock:false, hideBtns:false, askName:true, sound:true, volume:70, confetti:true, showStats:true, showTray:true,
   products:[
     {name:'Galaxy S Ultra',    icon:'phone',   offer:'XX% OFF', note:'Plus trade-in bonus – today only', img:''},
     {name:'Galaxy Z Fold',     icon:'fold',    offer:'XX% OFF', note:'Free storage upgrade', img:''},
@@ -402,6 +423,7 @@ const FORM = [
     {k:'seenMode',t:'check',l:'Tiles come back a different colour once they have been opened'},
     {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
+    {k:'askName',t:'check',l:'Ask players for their name after clearing the board (they can skip)'},
     {k:'holdLock',t:'check',l:'Kiosk lock: the reset button on game screens needs a 1-second press-and-hold'},
     {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the game title shows or hides them)'},
     {k:'confetti',t:'check',l:'Confetti'},
@@ -498,6 +520,7 @@ const art = p => p.img ? `<img class="pi" src="${p.img}" alt="">` : `<svg viewBo
 const PR = id => CFG.products[id] || {name:'',offer:'',note:'',icon:'box',img:''};
 const SU = c  => CFG.surprises[c.si] || {title:'Surprise!',text:''};
 function newGame(){
+  commitScore('');
   const P = plan(), rnd = seeded(CFG.seed||1);
   const ids  = shuffle(CFG.products.map((p,i)=>i),rnd).slice(0,P.pairs);
   const pool = shuffle(CFG.surprises.map((x,i)=>i),rnd);
@@ -537,14 +560,15 @@ function repaint(){                     // restyle the current round in place: n
 function showDeal(){ const p=PR(S.deal); $('#dIcon').innerHTML=art(p); $('#dName').textContent=p.name; $('#dOffer').textContent=p.offer; $('#dNote').textContent=p.note; }
 
 function layout(){
-  const W=stage.clientWidth, H=stage.clientHeight; if(!W||!H) return;
+  const hintEl=$('#hint'), hh=hintEl.getBoundingClientRect().height;      // the instruction line rides on top of the board
+  const W=stage.clientWidth, H=stage.clientHeight-hh; if(!W||H<=0) return;
   const cols=CFG.cols, rows=CFG.rows;      // exactly as set: the screen handles its own rotation
   const gap=CFG.gap*UI, pad=Math.max(gap,6), a=CFG.aspect/100;
   const h = Math.floor(Math.min((W-2*pad-gap*(cols-1))/(cols*a),(H-2*pad-gap*(rows-1))/rows)*CFG.boardScale/100);
   const w = Math.floor(h*a);
   board.style.gridTemplateColumns=`repeat(${cols},${w}px)`;
   board.style.gridAutoRows=h+'px';
-  board.style.marginTop=Math.max(0,(H-(rows*h+(rows-1)*gap+2*pad))*CFG.boardY/100)+'px';
+  stage.style.paddingTop=Math.max(0,(H-(rows*h+(rows-1)*gap+2*pad))*CFG.boardY/100)+'px';
   document.documentElement.style.setProperty('--cs',Math.min(w,h)+'px');
 }
 let UI=1;
@@ -639,6 +663,33 @@ board.addEventListener('click',e=>{
   }
 });
 
+/* ---------- name for the high score ---------- */
+let NAME='';
+const KEYS=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+$('#eKb').innerHTML=KEYS.map(r=>`<div class="r">${[...r].map(k=>`<button data-k="${k}">${k}</button>`).join('')}</div>`).join('')
+  +'<div class="r"><button class="w" data-k=" ">space</button><button class="m" data-k="back" aria-label="Delete">⌫</button></div>';
+function drawName(){ const b=$('#eNameBox'); b.textContent=NAME||'Tap the letters below'; b.classList.toggle('empty',!NAME); }
+function typeName(k){
+  if(k==='back') NAME=NAME.slice(0,-1);
+  else if(NAME.length<16 && !(k===' ' && (!NAME || NAME.slice(-1)===' '))) NAME+=k;
+  drawName();
+}
+function commitScore(name){               // saves the waiting score once, with or without a name
+  if(!S || !S.pending) return;
+  const sc=S.pending; S.pending=null; sc.name=String(name||'').trim().slice(0,16);
+  postScore(sc); log('score-saved',sc.name?'name "'+sc.name+'"':'no name');
+  $('#eName').classList.add('hide'); $('#eRest').classList.remove('hide');
+}
+$('#eKb').addEventListener('click',e=>{ const b=e.target.closest('[data-k]'); if(b){ typeName(b.dataset.k); tone([520],.04,'triangle'); } });
+$('#eSave').onclick=()=>commitScore(NAME);
+$('#eSkip').onclick=()=>commitScore('');
+document.addEventListener('keydown',e=>{   // a physical keyboard works too
+  if(!S || !S.pending || !$('#ovEnd').classList.contains('on') || !CFG.askName) return;
+  if(e.key==='Enter') commitScore(NAME); else if(e.key==='Backspace') typeName('back');
+  else if(/^[a-zA-Z ]$/.test(e.key)) typeName(e.key.toUpperCase());
+});
+addEventListener('pagehide',()=>commitScore(''));
+
 function finish(){
   $('#eTurns').textContent=S.turns;
   $('#eList').innerHTML=S.won.map(PR).map(p=>`<div>${esc(p.name)}<i>${esc(p.offer)}</i></div>`).join('');
@@ -646,7 +697,11 @@ function finish(){
   $('#ovEnd').classList.add('on');
   const secs=Math.round((Date.now()-(S.t0||Date.now()))/1000);
   log('finish',S.turns+' turns · '+secs+'s · '+CFG.cols+'×'+CFG.rows);
-  if(!ADMIN) postScore({turns:S.turns,secs,cols:CFG.cols,rows:CFG.rows,pairs:S.pairs,sur:S.deck.length-2*S.pairs,dev:DEV});   // the admin preview never sets records
+  // The score waits for a name. Skip, Play again, a reset or a new round all save it without one.
+  if(!ADMIN) S.pending={turns:S.turns,secs,cols:CFG.cols,rows:CFG.rows,pairs:S.pairs,sur:S.deck.length-2*S.pairs,dev:DEV};   // the admin preview never sets records
+  const ask=!!S.pending && CFG.askName;
+  if(S.pending && !ask) commitScore('');
+  NAME=''; drawName(); $('#eName').classList.toggle('hide',!ask); $('#eRest').classList.toggle('hide',ask);
 }
 function flipAllBack(){               // same tile positions, everything face-down again
   closeOvs();
@@ -664,7 +719,7 @@ function open(sel,cb){
   if(CFG.autoClose>0) autoT=setTimeout(()=>closeOv($(sel)),CFG.autoClose*1000);
 }
 function closeOv(ov){ if(!ov.classList.contains('on')) return; clearTimeout(autoT); ov.classList.remove('on'); const cb=afterClose; afterClose=null; cb&&cb(); }
-function closeOvs(){ clearTimeout(autoT); afterClose=null; document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on')); }
+function closeOvs(){ commitScore(''); clearTimeout(autoT); afterClose=null; document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on')); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-close]'); if(b) closeOv(b.closest('.ov')); });
 function home(){ closeOvs(); $('#start').classList.remove('off'); log('start-screen'); }
 $('#bAgain').onclick = reseed;
@@ -688,7 +743,7 @@ function press(b,fn,always){ let t=0, fired=false;
     if(!fired) toast('Press and hold for 1 second');
   });
 }
-$('#bFull').onclick = ()=>{ const d=document; (d.fullscreenElement? d.exitFullscreen() : d.documentElement.requestFullscreen&&d.documentElement.requestFullscreen())?.catch?.(()=>{}); };
+$('#bFull').onclick = $('#bFull2').onclick = ()=>{ const d=document; (d.fullscreenElement? d.exitFullscreen() : d.documentElement.requestFullscreen&&d.documentElement.requestFullscreen())?.catch?.(()=>{}); };
 function resetMenu(){ if(!S) return home(); clearTimeout(autoT); $('#ovReset').classList.add('on'); }
 const rClose = ()=>$('#ovReset').classList.remove('on');
 $('#rFlip').onclick    = ()=>{ flipAllBack(); toast('All tiles flipped back'); };
@@ -891,7 +946,7 @@ function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); if(ADMIN){ LOGS=[]; got
 
 /* ---------- scores and log: storage + admin views ---------- */
 function postScore(sc){
-  if(NETMODE==='remote') fetch('api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sc)}).catch(()=>{});
+  if(NETMODE==='remote') fetch('api/score',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(sc)}).catch(()=>{});
   else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); }
 }
 function gotScores(list){ SCORES=list; renderScores(); }
@@ -902,13 +957,13 @@ const when=ts=>{ const d=new Date(ts); return d.toLocaleDateString(undefined,{da
 function renderScores(){
   if(!ADMIN || !$('#aBest')) return;
   const P=plan(), same=SCORES.filter(x=>x.cols===CFG.cols&&x.rows===CFG.rows&&x.pairs===P.pairs).sort(better)[0];
-  $('#aBest').innerHTML = same ? `<b>${same.turns} turns · ${mmss(same.secs)}</b><span>Best for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs) · ${when(same.ts)} · screen ${esc(same.dev)}</span>`
+  $('#aBest').innerHTML = same ? `<b>${same.name?esc(same.name)+' · ':''}${same.turns} turns · ${mmss(same.secs)}</b><span>Best for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs) · ${when(same.ts)} · screen ${esc(same.dev)}</span>`
                                : `<b>No score yet</b><span>for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs). A score is recorded each time a game screen clears the board.</span>`;
   const best={}; SCORES.forEach(x=>{ const k=x.cols+'×'+x.rows+'·'+x.pairs; if(!best[k]||better(x,best[k])<0) best[k]=x; });
-  const row=(x,star)=>`<tr><td>${when(x.ts)}</td><td>${x.cols} × ${x.rows}</td><td>${x.turns}${star?' ★':''}</td><td>${mmss(x.secs)}</td><td>${esc(x.dev)}</td></tr>`;
+  const row=(x,star)=>`<tr><td>${when(x.ts)}</td><td>${x.name?esc(x.name):'<span style="color:#9aa3b5">no name</span>'}</td><td>${x.cols} × ${x.rows}</td><td>${x.turns}${star?' ★':''}</td><td>${mmss(x.secs)}</td><td>${esc(x.dev)}</td></tr>`;
   const recent=SCORES.slice(-15).reverse();
   $('#aScores').innerHTML = SCORES.length ? `<div class="note">${SCORES.length} completed round${SCORES.length===1?'':'s'}. ★ marks the best for its layout: fewest turns, then fastest.</div>
-    <div style="overflow-x:auto"><table class="sc"><tr><th>When</th><th>Layout</th><th>Turns</th><th>Time</th><th>Screen</th></tr>${recent.map(x=>row(x,best[x.cols+'×'+x.rows+'·'+x.pairs]===x)).join('')}</table></div>` : '';
+    <div style="overflow-x:auto"><table class="sc"><tr><th>When</th><th>Name</th><th>Layout</th><th>Turns</th><th>Time</th><th>Screen</th></tr>${recent.map(x=>row(x,best[x.cols+'×'+x.rows+'·'+x.pairs]===x)).join('')}</table></div>` : '';
 }
 const NOISY=/^(error|tap-ignored|connection)$/;
 function logLine(e){

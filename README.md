@@ -69,6 +69,9 @@ folder), so they survive restarts.
 - **High scores**: a score is recorded each time a game screen clears the board (turns, time,
   layout, screen). The best for a layout is the fewest turns, then the fastest time. Rounds
   played on the admin preview are not scored.
+- **Player names**: after clearing the board the player can enter a name on an on-screen
+  keyboard, or skip. Skipping, starting a new round, a reset or leaving the page saves the
+  score without a name. The prompt can be switched off on the admin page.
 - **Event log**: every screen reports taps, ignored taps and the reason, matches, mismatches,
   surprises, pop-ups, reshuffles, settings updates, connections and script errors. The server
   keeps the last 2,000 events. The log can be filtered, downloaded as text, or cleared.
