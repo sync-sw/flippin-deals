@@ -49,9 +49,9 @@ When served by `server.js`:
   page, a screen's reset menu, or "Play again") gives every screen the same new layout.
   Which tiles are open is not shared; each screen tracks its own play.
 - The admin page's round buttons act on every screen: flip all tiles back, reshuffle a new
-  round, peek on all screens, back to start screen, start the game.
-- "Show answers here only" turns the admin preview face-up as a host cheat sheet. Game
-  screens are not affected.
+  round, "Peek: all screens", back to start screen, start the game.
+- "Peek: admin only" flips the admin preview face-up for three seconds; game screens are not
+  affected. "Peek: all screens" does the same on every screen.
 - "Flip all tiles back" and "Back to start screen" in a screen's own reset menu only affect
   that screen.
 - Audio: sound effects on/off and volume are shared settings. Each screen plays through its
@@ -59,8 +59,23 @@ When served by `server.js`:
 - The admin header shows how many devices are connected. Screens reconnect on their own and
   pick up the current settings if the server restarts.
 
+- A surprise tile picked as the second tile of a turn ends that turn: the first tile flips back.
+
+## High scores and event log
+
+Both are on the admin page and are stored on the server (`scores.json`, `log.json` in the data
+folder), so they survive restarts.
+
+- **High scores**: a score is recorded each time a game screen clears the board (turns, time,
+  layout, screen). The best for a layout is the fewest turns, then the fastest time. Rounds
+  played on the admin preview are not scored.
+- **Event log**: every screen reports taps, ignored taps and the reason, matches, mismatches,
+  surprises, pop-ups, reshuffles, settings updates, connections and script errors. The server
+  keeps the last 2,000 events. The log can be filtered, downloaded as text, or cleared.
+
 Endpoints: `GET /api/state`, `PUT /api/config`, `POST /api/command`, `GET /api/events`
-(server-sent events), `GET /healthz`.
+(server-sent events), `GET|POST|DELETE /api/log`, `GET|DELETE /api/scores`, `POST /api/score`,
+`GET /healthz`.
 
 ## Controls
 

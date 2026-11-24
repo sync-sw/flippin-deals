@@ -52,13 +52,16 @@
   .hide{display:none!important}
 
   /* ---------- board ---------- */
+  /* instruction line above the board; it keeps its space after the first match so the board does not jump */
+  .hint{zoom:var(--ui);flex:none;text-align:center;font-size:clamp(14px,2.4vmin,26px);font-weight:700;color:#c9d2f2;padding:0 0 var(--pad)}
+  .hint.gone{visibility:hidden}
   .stage{flex:1;min-height:0;display:grid;justify-items:center;align-items:start}
   .board{display:grid;gap:var(--gap);padding:max(var(--gap),6px);border-radius:clamp(12px,2vmin,24px);
     background:linear-gradient(160deg,color-mix(in srgb,var(--frame) 70%,#fff),color-mix(in srgb,var(--frame) 80%,#000));
     box-shadow:0 20px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.5)}
   .card{position:relative;perspective:900px;border-radius:var(--rad)}
   .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform var(--flip) cubic-bezier(.3,1.3,.5,1)}
-  .card.up .inner,.board.peek .inner,.board.reveal .inner{transform:rotateY(180deg)}
+  .card.up .inner,.board.peek .inner{transform:rotateY(180deg)}
   .card:active .inner{scale:.95}
   .face{position:absolute;inset:0;border-radius:var(--rad);backface-visibility:hidden;-webkit-backface-visibility:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center}
@@ -186,6 +189,13 @@
   .adm .item .w{grid-column:1/-1}
   .adm .item .row{grid-column:1/-1;justify-content:space-between}
   .adm .item img{width:42px;height:42px;object-fit:contain;border:1px solid #d5dae8;border-radius:6px;background:#fff}
+  .adm .logbox{height:280px;overflow:auto;background:#0a1036;color:#dfe6ff;border-radius:8px;padding:8px 10px;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;touch-action:pan-y}
+  .adm .logbox .er{color:#ff9d9d}.adm .logbox .sv{color:#8fb0ff}.adm .logbox .ad{color:#9aa3b5}
+  .adm table.sc{width:100%;border-collapse:collapse;font-size:13px}
+  .adm table.sc th,.adm table.sc td{text-align:left;padding:5px 6px;border-bottom:1px solid #e3e7f1;white-space:nowrap}
+  .adm table.sc th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#5a6385}
+  .adm .best{background:#0a1036;color:#fff;border-radius:10px;padding:12px 14px}
+  .adm .best b{display:block;font-size:26px;line-height:1.1}.adm .best span{font-size:12.5px;color:#b9c3ea}
   .adm .logoprev{height:48px;max-width:160px;object-fit:contain;background:#0a1036;border-radius:8px;padding:6px}
   @media (prefers-reduced-motion:reduce){.play{animation:none}}
 </style>
@@ -201,6 +211,7 @@
     <button class="ibtn" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="bHome" aria-label="Reset"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg></button>
   </header>
+  <div class="hint" id="hint"></div>
   <div class="stage" id="stage"><div class="board" id="board"></div></div>
   <div class="tray" id="tray"></div>
 </div>
@@ -259,8 +270,8 @@
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
       <button class="btn pri" id="aShuffle">Reshuffle new round</button>
-      <button class="btn" id="aReveal">Show answers here only</button>
-      <button class="btn" id="aPeek">Peek on all screens (3s)</button>
+      <button class="btn" id="aPeekHere">Peek: admin only (3s)</button>
+      <button class="btn" id="aPeek">Peek: all screens (3s)</button>
       <button class="btn" id="aStart">Back to start screen</button>
       <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
@@ -273,6 +284,17 @@
     <details><summary>Surprise cards</summary><div class="body">
       <div id="aSurs" style="display:grid;gap:8px"></div>
       <button class="btn" id="aAddSur">+ Add surprise</button>
+    </div></details>
+    <details open><summary>High scores</summary><div class="body">
+      <div class="best" id="aBest"></div>
+      <div id="aScores"></div>
+      <button class="btn warn" id="aClearScores">Clear all scores</button>
+    </div></details>
+    <details><summary>Event log</summary><div class="body">
+      <div class="note" id="aLogNote"></div>
+      <div class="logbox" id="aLog"></div>
+      <label class="c"><input type="checkbox" id="aLogErr">Show errors and ignored taps only</label>
+      <div class="row"><button class="btn" id="aLogDl" style="flex:1">Download log</button><button class="btn warn" id="aLogClear" style="flex:1">Clear log</button></div>
     </div></details>
     <details><summary>Save, move &amp; reset settings</summary><div class="body">
       <div class="note" id="aSaveNote">Settings save automatically in this browser. To move them to the touchscreen, export here and import there.</div>
@@ -292,6 +314,7 @@
 const DEFAULTS = {
   kicker:'Samsung Black Friday', title:'Flippin Deals',
   blurb:'Flip two tiles. Match a product to unlock its Black Friday offer. Watch out for surprise cards.',
+  hint:'Match two tiles to reveal the first offer',
   cols:4, rows:5, sur:4, seed:1, boardScale:100, boardY:50,
   uiAuto:true, uiScale:100, admScale:100, tileText:100, aspect:100, gap:10, radius:12, frame:'#c9d0de',
   symbol:'?', label:'Black Friday', labelFreq:20,
@@ -394,6 +417,7 @@ const FORM = [
     {k:'kicker',t:'text',l:'Small heading'},
     {k:'title',t:'text',l:'Game title'},
     {k:'blurb',t:'text',l:'Start screen instructions'},
+    {k:'hint',t:'text',l:'Instruction above the board (until the first match)'},
   ]],
 ];
 /* ===================================================================== */
@@ -401,7 +425,29 @@ const FORM = [
 const $ = s => document.querySelector(s);
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone = o => JSON.parse(JSON.stringify(o));
-const KEY='flippinDealsCfg.v1';
+const KEY='flippinDealsCfg.v1', KEY_LOG='flippinDealsLog.v1', KEY_SC='flippinDealsScores.v1';
+const CID=Math.random().toString(36).slice(2), DEV=CID.slice(0,4);   // this page load; DEV is the short tag shown in the log
+
+/* ---------- event log + scores ----------
+   With the server: events are batched to /api/log and every admin page sees them live.
+   Opened as a file: they are kept in this browser's storage (last 300) for index.html#admin. */
+let NETMODE=null, logQ=[], logT=0, LOGS=[], SCORES=[];
+const lsGet=(k)=>{ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } };
+const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+function log(ev,d){
+  logQ.push({ts:Date.now(),dev:DEV,role:(typeof ADMIN!=='undefined'&&ADMIN)?'admin':'game',ev,d:d==null?'':String(d).slice(0,300)});
+  if(!logT) logT=setTimeout(flushLog,400);
+}
+function flushLog(){
+  logT=0; if(!logQ.length || !NETMODE) return;            // held until we know whether there is a server
+  const batch=logQ.splice(0,50);
+  if(NETMODE==='remote') fetch('api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:batch})}).catch(()=>{});
+  else{ lsSet(KEY_LOG,lsGet(KEY_LOG).concat(batch).slice(-300)); gotLogs(batch); }
+  if(logQ.length) logT=setTimeout(flushLog,400);
+}
+addEventListener('error',e=>log('error',(e.message||'error')+' @ '+(e.filename||'').split('/').pop()+':'+e.lineno));
+addEventListener('unhandledrejection',e=>log('error','promise: '+(e.reason&&e.reason.message||e.reason)));
+const tileName = c => c.t==='s' ? 'surprise "'+SU(c).title+'"' : PR(c.id).name;
 let CFG = clone(DEFAULTS);
 try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) CFG=Object.assign(clone(DEFAULTS),s); }catch(e){}
 function save(){
@@ -445,7 +491,7 @@ const shuffle = (a,rnd=Math.random) => { for(let i=a.length-1;i>0;i--){const j=r
    tiles in the same places. A reshuffle is just a new seed pushed to everyone. */
 function seeded(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const newSeed = () => 1+(Math.random()*2147483646|0);
-function reseed(){ CFG.seed=newSeed(); save(); closeOvs(); newGame(); toast('New round'); }
+function reseed(){ log('reshuffle','requested on this device'); CFG.seed=newSeed(); save(); closeOvs(); newGame(); toast('New round'); }
 const art = p => p.img ? `<img class="pi" src="${p.img}" alt="">` : `<svg viewBox="0 0 48 48">${ICONS[p.icon]||ICONS.box}</svg>`;
 
 /* ---------- build a round ---------- */
@@ -462,6 +508,7 @@ function newGame(){
   S = {deck, pairs:P.pairs, first:null, lock:false, turns:0, matches:0, won:[], deal:-1};
   board.innerHTML = deck.map((c,i)=>`<button class="card" data-i="${i}" aria-label="Tile ${i+1}"><div class="inner"><div class="face back"></div><div class="face front ${c.t==='s'?'sur':''}"></div></div></button>`).join('');
   repaint(); layout(); stats();
+  log('deal',CFG.cols+'×'+CFG.rows+' · '+P.pairs+' pairs + '+P.sur+' surprises · seed '+CFG.seed);
 }
 function tileCol(c){                    // the tile's colour slot, or the next enabled one if that slot is switched off
   const on=[1,2,3].filter(n=>CFG['c'+n+'on']);
@@ -529,6 +576,7 @@ function apply(){
   if(!CFG.seenMode) document.querySelectorAll('.card.seen').forEach(el=>el.classList.remove('seen'));
   repaint();
   const n=$('#aLayoutNote'); if(n){ n.textContent=`${P.note}Now: ${P.tiles} tiles = ${P.pairs} product pairs + ${P.sur} surprises.`; n.classList.toggle('bad',!!P.note); }
+  renderScores();
   const pn=$('#aProdNote'); if(pn) pn.textContent=`${CFG.products.length} products. This layout uses ${P.pairs} per round, picked at random.`;
   layout();
 }
@@ -541,23 +589,34 @@ function stats(){ $('#sMatch').textContent=`${S.matches}/${S.pairs}`; $('#sTurn'
 function renderTray(){
   tray.innerHTML = '<span class="lbl">Unlocked</span>' + (S.won.length
     ? S.won.map(PR).map(p=>`<span class="chip">${esc(p.name)}<i>${esc(p.offer)}</i></span>`).join('')
-    : '<span class="empty">Match two tiles to reveal the first offer</span>');
+    : '');
+  $('#hint').textContent=CFG.hint; $('#hint').classList.toggle('gone',S.won.length>0); $('#hint').classList.toggle('hide',!CFG.hint);
   tray.classList.toggle('many',S.won.length>5); tray.classList.toggle('lots',S.won.length>10);
   layout();                             // the strip may have grown a row: refit the board
 }
 
 /* ---------- play ---------- */
 board.addEventListener('click',e=>{
-  const el = e.target.closest('.card'); if(!el || S.lock) return;
-  if(el.classList.contains('up')) return;
-  const c = S.deck[+el.dataset.i], F=CFG.flipMs;
+  const el = e.target.closest('.card'); if(!el) return;
+  const c = S.deck[+el.dataset.i], F=CFG.flipMs, tag='tile '+el.dataset.i+' ('+tileName(c)+')';
+  if(S.lock){ log('tap-ignored',tag+' · board busy'); return; }
+  if(el.classList.contains('up')){ log('tap-ignored',tag+' · already open'); return; }
+  if(!S.t0) S.t0=Date.now();
   el.classList.add('up'); tone([440],.07,'triangle');
+  log('tap',tag+(c.t==='s'?'':S.first?' · 2nd pick':' · 1st pick'));
 
   if(c.t==='s'){                      // surprise: reveal, the turn carries on
     S.lock = true; el.classList.add('done','sdone');
     setTimeout(()=>{ tone([660,880,1320],.14,'square'); burst('#ffd166');
       $('#sTitle').textContent=SU(c).title; $('#sText').textContent=SU(c).text;
-      open('#ovSur',()=>{S.lock=false}); },F+50);
+      open('#ovSur',()=>{
+        // A surprise picked as the SECOND tile ends that turn: the first tile goes back face-down,
+        // so the next tap starts a fresh pair instead of being judged against a stale tile.
+        const f=S.first;
+        log('surprise-closed',f?'turn ended, tile '+f.dataset.i+' flipped back':'no tile was open');
+        if(f){ S.first=null; S.turns++; stats(); f.classList.remove('up'); if(CFG.seenMode){ f.classList.add('seen'); setTimeout(()=>paintSeen(f),CFG.flipMs/2); } }
+        S.lock=false;
+      }); },F+50);
     return;
   }
   if(!S.first){ S.first = el; return; }
@@ -567,11 +626,11 @@ board.addEventListener('click',e=>{
     setTimeout(()=>{
       a.classList.add('done'); el.classList.add('done'); S.matches++; S.won.push(ida); stats(); renderTray();
       tone([523,659,784,1047],.13); burst('#4f74ff');
-      S.deal=ida; showDeal();
-      open('#ovDeal',()=>{ S.lock=false; if(S.matches===S.pairs) finish(); });
+      S.deal=ida; showDeal(); log('match',PR(ida).name+' · tiles '+a.dataset.i+'+'+el.dataset.i+' · '+S.matches+'/'+S.pairs);
+      open('#ovDeal',()=>{ S.lock=false; log('offer-closed',PR(ida).name); if(S.matches===S.pairs) finish(); });
     },F+100);
   }else{
-    a.classList.add('shake'); el.classList.add('shake');
+    a.classList.add('shake'); el.classList.add('shake'); log('mismatch','tiles '+a.dataset.i+'+'+el.dataset.i+' · '+PR(ida).name+' vs '+PR(c.id).name);
     setTimeout(()=>tone([220,180],.12,'sawtooth'),F);
     setTimeout(()=>{
       for(const x of [a,el]){ x.classList.remove('up','shake'); if(CFG.seenMode){ x.classList.add('seen'); setTimeout(()=>paintSeen(x),F/2); } }
@@ -585,15 +644,18 @@ function finish(){
   $('#eList').innerHTML=S.won.map(PR).map(p=>`<div>${esc(p.name)}<i>${esc(p.offer)}</i></div>`).join('');
   tone([523,659,784,1047,1319],.16); burst('#fff',160);
   $('#ovEnd').classList.add('on');
+  const secs=Math.round((Date.now()-(S.t0||Date.now()))/1000);
+  log('finish',S.turns+' turns · '+secs+'s · '+CFG.cols+'×'+CFG.rows);
+  if(!ADMIN) postScore({turns:S.turns,secs,cols:CFG.cols,rows:CFG.rows,pairs:S.pairs,sur:S.deck.length-2*S.pairs,dev:DEV});   // the admin preview never sets records
 }
 function flipAllBack(){               // same tile positions, everything face-down again
   closeOvs();
   document.querySelectorAll('.card').forEach(el=>{ el.classList.remove('up','done','sdone','seen','shake'); paintSeen(el); });
-  Object.assign(S,{first:null,lock:false,turns:0,matches:0,won:[]}); stats(); renderTray();
+  Object.assign(S,{first:null,lock:false,turns:0,matches:0,won:[],t0:0}); stats(); renderTray(); log('flip-all-back');
 }
 function peek(){
   if(board.classList.contains('peek')) return;
-  board.classList.add('peek'); setTimeout(()=>board.classList.remove('peek'),3000);
+  board.classList.add('peek'); setTimeout(()=>board.classList.remove('peek'),3000); log('peek');
 }
 
 /* ---------- overlays ---------- */
@@ -604,9 +666,9 @@ function open(sel,cb){
 function closeOv(ov){ if(!ov.classList.contains('on')) return; clearTimeout(autoT); ov.classList.remove('on'); const cb=afterClose; afterClose=null; cb&&cb(); }
 function closeOvs(){ clearTimeout(autoT); afterClose=null; document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on')); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-close]'); if(b) closeOv(b.closest('.ov')); });
-function home(){ closeOvs(); $('#start').classList.remove('off'); }
+function home(){ closeOvs(); $('#start').classList.remove('off'); log('start-screen'); }
 $('#bAgain').onclick = reseed;
-$('#bPlay').onclick  = ()=>{ $('#start').classList.add('off'); tone([523,784],.1); newGame(); };
+$('#bPlay').onclick  = ()=>{ $('#start').classList.add('off'); tone([523,784],.1); log('play','tapped on this screen'); newGame(); };
 
 /* ---------- host controls ----------
    In-game buttons: a plain tap by default, a 1-second hold with "Kiosk lock" on.
@@ -677,9 +739,7 @@ function admin(on){
 $('#aFlipBack').onclick= ()=>send('flipBack');
 $('#aShuffle').onclick = reseed;
 $('#aPeek').onclick    = ()=>send('peek');
-$('#aReveal').onclick  = e=>{                 // host cheat sheet: only this admin page, stays on until switched off
-  const on=board.classList.toggle('reveal'); e.currentTarget.textContent=on?'Hide answers here':'Show answers here only'; e.currentTarget.classList.toggle('pri',on);
-};
+$('#aPeekHere').onclick= ()=>peek();        // same 3-second peek, on this admin page only
 $('#aStart').onclick   = ()=>send('home');
 $('#aPlay').onclick    = ()=>send('play');
 
@@ -785,7 +845,6 @@ $('#fImport').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) r
    every change or command is pushed to all connected screens. Opened as a
    plain file, none of this runs and the app works on this device only.
    ===================================================================== */
-const CID=Math.random().toString(36).slice(2);          // identifies this device so it ignores its own echoes
 let REMOTE=false, pushT=0;
 const post=(url,method,body)=>fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{ if(!r.ok) throw 0; return r.json(); });
 function net(text,cls){ const n=$('#netMsg'); if(!n) return; n.textContent=text; n.className='net '+(cls||''); }
@@ -796,6 +855,7 @@ function takeCfg(cfg){                                  // settings arriving fro
   try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
   const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();
+  log('settings-received',rebuild?'new board dealt':'restyled in place');
   if(rebuild && S){ closeOvs(); newGame(); }
 }
 const CMDS={
@@ -814,17 +874,70 @@ function connect(){
     if(ADMIN) $('#aSaveNote').textContent='Settings are stored on the server and shared by every screen. Export / import is for backups.';
     if(st.cfg) takeCfg(st.cfg); else pushCfg();         // first device seeds the server with its settings
     let first=true;
-    const es=new EventSource('api/events');
+    NETMODE='remote'; flushLog();
+    if(ADMIN){ fetch('api/log').then(r=>r.json()).then(d=>{ LOGS=[]; gotLogs(d.entries||[]); }).catch(()=>{}); fetch('api/scores').then(r=>r.json()).then(d=>gotScores(d.scores||[])).catch(()=>{}); }
+    const es=new EventSource('api/events?id='+DEV+'&role='+(ADMIN?'admin':'game'));
     es.onopen=()=>{ if(!first) fetch('api/state').then(r=>r.json()).then(s=>{ if(s.cfg) takeCfg(s.cfg); }).catch(()=>{}); first=false; };
-    es.onerror=()=>net('Reconnecting…','down');
+    es.onerror=()=>{ net('Reconnecting…','down'); log('connection','lost, retrying'); };
+    es.addEventListener('log',e=>gotLogs(JSON.parse(e.data).entries));
+    es.addEventListener('logclear',()=>{ LOGS=[]; renderLog(); });
+    es.addEventListener('scores',e=>gotScores(JSON.parse(e.data).scores));
     es.addEventListener('clients',e=>{ const n=JSON.parse(e.data).count; net('Live · '+n+' device'+(n===1?'':'s'),'live'); });
     es.addEventListener('config',e=>{ const d=JSON.parse(e.data); if(d.from!==CID) takeCfg(d.cfg); });
-    es.addEventListener('command',e=>{ const d=JSON.parse(e.data); if(d.from!==CID && CMDS[d.cmd]) CMDS[d.cmd](); });
-  }).catch(()=>{});                                      // no server: stay in single-device mode
+    es.addEventListener('command',e=>{ const d=JSON.parse(e.data); if(d.from!==CID && CMDS[d.cmd]){ log('command-received',d.cmd); CMDS[d.cmd](); } });
+  }).catch(()=>local());                                 // no server: stay in single-device mode
+}
+function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); if(ADMIN){ LOGS=[]; gotLogs(lsGet(KEY_LOG)); renderScores(); } flushLog(); }
+
+/* ---------- scores and log: storage + admin views ---------- */
+function postScore(sc){
+  if(NETMODE==='remote') fetch('api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sc)}).catch(()=>{});
+  else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); }
+}
+function gotScores(list){ SCORES=list; renderScores(); }
+function gotLogs(entries){ if(!ADMIN) return; LOGS=LOGS.concat(entries).slice(-2000); renderLog(entries); }
+const better=(a,b)=>a.turns-b.turns || a.secs-b.secs;      // fewer turns wins, then the faster time
+const mmss=s=>Math.floor(s/60)+':'+('0'+s%60).slice(-2);
+const when=ts=>{ const d=new Date(ts); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); };
+function renderScores(){
+  if(!ADMIN || !$('#aBest')) return;
+  const P=plan(), same=SCORES.filter(x=>x.cols===CFG.cols&&x.rows===CFG.rows&&x.pairs===P.pairs).sort(better)[0];
+  $('#aBest').innerHTML = same ? `<b>${same.turns} turns · ${mmss(same.secs)}</b><span>Best for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs) · ${when(same.ts)} · screen ${esc(same.dev)}</span>`
+                               : `<b>No score yet</b><span>for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs). A score is recorded each time a game screen clears the board.</span>`;
+  const best={}; SCORES.forEach(x=>{ const k=x.cols+'×'+x.rows+'·'+x.pairs; if(!best[k]||better(x,best[k])<0) best[k]=x; });
+  const row=(x,star)=>`<tr><td>${when(x.ts)}</td><td>${x.cols} × ${x.rows}</td><td>${x.turns}${star?' ★':''}</td><td>${mmss(x.secs)}</td><td>${esc(x.dev)}</td></tr>`;
+  const recent=SCORES.slice(-15).reverse();
+  $('#aScores').innerHTML = SCORES.length ? `<div class="note">${SCORES.length} completed round${SCORES.length===1?'':'s'}. ★ marks the best for its layout: fewest turns, then fastest.</div>
+    <div style="overflow-x:auto"><table class="sc"><tr><th>When</th><th>Layout</th><th>Turns</th><th>Time</th><th>Screen</th></tr>${recent.map(x=>row(x,best[x.cols+'×'+x.rows+'·'+x.pairs]===x)).join('')}</table></div>` : '';
+}
+const NOISY=/^(error|tap-ignored|connection)$/;
+function logLine(e){
+  const d=new Date(e.ts), t=d.toTimeString().slice(0,8)+'.'+('00'+d.getMilliseconds()).slice(-3);
+  return t+'  '+(e.role+'·'+e.dev+'          ').slice(0,11)+' '+(e.ev+'                  ').slice(0,18)+' '+e.d;
+}
+function renderLog(added){
+  const box=$('#aLog'); if(!ADMIN || !box) return;
+  const only=$('#aLogErr').checked, keep=e=>!only||NOISY.test(e.ev), atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
+  const html=list=>list.filter(keep).map(e=>`<div class="${e.ev==='error'?'er':e.role==='server'?'sv':e.role==='admin'?'ad':''}">${esc(logLine(e))}</div>`).join('');
+  if(added && box.childElementCount) box.insertAdjacentHTML('beforeend',html(added)); else box.innerHTML=html(LOGS);
+  while(box.childElementCount>2000) box.firstElementChild.remove();
+  if(atEnd) box.scrollTop=box.scrollHeight;
+  $('#aLogNote').textContent=LOGS.length+' events from every connected screen, newest at the bottom. Devices are tagged role·id (grey = admin pages, blue = server).';
+}
+if(typeof ADMIN!=='undefined' && ADMIN){
+  $('#aLogErr').onchange=()=>renderLog();
+  $('#aLogDl').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([LOGS.map(logLine).join('\n')],{type:'text/plain'})); a.download='flippin-deals-log.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+  $('#aLogClear').onclick=()=>{ if(NETMODE==='remote') fetch('api/log',{method:'DELETE'}).catch(()=>{}); else{ lsSet(KEY_LOG,[]); LOGS=[]; renderLog(); } };
+  let armed=0; const cb=$('#aClearScores');
+  cb.onclick=()=>{ if(!armed){ cb.textContent='Tap again to confirm'; armed=setTimeout(()=>{armed=0;cb.textContent='Clear all scores'},3000); return; }
+    clearTimeout(armed); armed=0; cb.textContent='Clear all scores';
+    if(NETMODE==='remote') fetch('api/scores',{method:'DELETE'}).catch(()=>{}); else{ lsSet(KEY_SC,[]); gotScores([]); } };
+  addEventListener('storage',e=>{ if(NETMODE!=='local') return; if(e.key===KEY_LOG){ LOGS=[]; gotLogs(lsGet(KEY_LOG)); } if(e.key===KEY_SC) gotScores(lsGet(KEY_SC)); });
 }
 
 apply();
-if(location.protocol!=='file:') connect();
+log('page-loaded',innerWidth+'×'+innerHeight+' · '+(/Chrom(?:e|ium)\/(\d+)/.exec(navigator.userAgent)||['browser'])[0]);
+if(location.protocol!=='file:') connect(); else local();
 if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
 else $('#adm').remove();                 // game screens carry no admin panel at all
 </script>
