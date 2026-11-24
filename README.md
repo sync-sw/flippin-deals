@@ -1,6 +1,6 @@
 # Flippin Deals
 
-Touchscreen memory-tile game mockup for the Black Friday live commerce activation
+Touchscreen memory-tile game for the Black Friday live commerce activation
 ("Concept 3 – Black Friday Flippin Deals").
 
 Players flip two tiles; a matching pair of products unlocks that product's Black Friday
@@ -81,5 +81,5 @@ Settings are stored in the browser's `localStorage` on the device where they are
 
 ## Status
 
-Mockup. All offers are placeholders ("XX% OFF"), and product names, icons and surprise
+All offers are placeholders ("XX% OFF"), and product names, icons and surprise
 mechanics are examples to be replaced with the real content.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Black Friday Flippin Deals – Touchscreen Mockup</title>
+<title>Black Friday Flippin Deals</title>
 <style>
   :root{
     --ink:#05081c; --blue:#2447f0; --blue2:#4f74ff; --glow:#8fb0ff; --silver2:#9aa3b5; --white:#f5f7ff; --gold:#ffd166;
@@ -88,8 +88,11 @@
   @keyframes pop{from{scale:0}70%{scale:1.25}to{scale:1}}
 
   /* ---------- deal tray ---------- */
-  .tray{zoom:var(--ui);flex:none;display:flex;gap:var(--pad);align-items:center;padding-top:var(--pad);min-height:clamp(46px,7vmin,76px);overflow-x:auto;scrollbar-width:none}
-  .tray::-webkit-scrollbar{display:none}
+  /* unlocked offers: wraps onto extra rows and tightens up as it fills, so nothing is cut off */
+  .tray{zoom:var(--ui);flex:none;display:flex;flex-wrap:wrap;gap:8px var(--pad);align-items:center;padding-top:var(--pad);min-height:clamp(46px,7vmin,76px)}
+  .tray.many .chip{font-size:clamp(10px,1.4vmin,15px);padding:6px 11px}
+  .tray.lots .chip{font-size:clamp(9px,1.15vmin,12.5px);padding:4px 9px}
+  .tray.many,.tray.lots{gap:6px 8px}
   .tray .lbl{flex:none;font-size:clamp(10px,1.4vmin,14px);letter-spacing:.16em;text-transform:uppercase;color:var(--silver2);font-weight:700}
   .chip{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:99px;background:#fff;color:#0a1036;font-weight:800;
     font-size:clamp(11px,1.7vmin,18px);animation:pop .4s both}
@@ -134,7 +137,6 @@
     font-size:clamp(22px,4vmin,44px);font-weight:900;box-shadow:0 0 0 0 rgba(79,116,255,.7);animation:pulse 1.8s infinite}
   @keyframes pulse{70%{box-shadow:0 0 0 28px rgba(79,116,255,0)}100%{box-shadow:0 0 0 0 rgba(79,116,255,0)}}
   .start .ibtn{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top))}
-  .mock{zoom:var(--ui);position:fixed;left:50%;bottom:6px;translate:-50% 0;z-index:30;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);pointer-events:none;white-space:nowrap}
   canvas#fx{position:fixed;inset:0;z-index:15;pointer-events:none}
 
   /* ---------- admin drawer ---------- */
@@ -251,7 +253,6 @@
   <div class="meta" id="stMeta"></div>
   <button class="play" id="bPlay">Tap to play</button>
 </div>
-<div class="mock" id="mock">Mockup · sample offers · not final set design</div>
 
 <!-- ======================= ADMIN ======================= -->
 <aside class="adm" id="adm">
@@ -298,7 +299,7 @@ const DEFAULTS = {
   c1:'#2447f0', c1on:true, c2:'#0a0f2a', c2on:true, c3:'#d9dee8', c3on:true,
   logo:'', logoBacks:false, logoHeader:true,
   flipMs:500, mismatchMs:1100, seenMode:false, seenColor:'#6b7390', autoClose:0,
-  holdLock:false, hideBtns:false, sound:true, confetti:true, showStats:true, showTray:true, showMock:true,
+  holdLock:false, hideBtns:false, sound:true, confetti:true, showStats:true, showTray:true,
   products:[
     {name:'Galaxy S Ultra',    icon:'phone',   offer:'XX% OFF', note:'Plus trade-in bonus – today only', img:''},
     {name:'Galaxy Z Fold',     icon:'fold',    offer:'XX% OFF', note:'Free storage upgrade', img:''},
@@ -385,7 +386,6 @@ const FORM = [
     {k:'confetti',t:'check',l:'Confetti'},
     {k:'showStats',t:'check',l:'Show matches / turns counters'},
     {k:'showTray',t:'check',l:'Show unlocked-offers strip'},
-    {k:'showMock',t:'check',l:'Show “mockup” footnote'},
   ]],
   ['Titles & text', false, [
     {k:'kicker',t:'text',l:'Small heading'},
@@ -516,7 +516,7 @@ function apply(){
   for(const id of ['#hLogo','#sLogo']){ const el=$(id); el.classList.toggle('hide',!(CFG.logo&&CFG.logoHeader)); if(CFG.logo) el.src=CFG.logo; }
   $('#stM').classList.toggle('hide',!CFG.showStats); $('#stT').classList.toggle('hide',!CFG.showStats);
   document.querySelector('header').classList.toggle('nobtn',!!CFG.hideBtns);
-  tray.classList.toggle('hide',!CFG.showTray); $('#mock').classList.toggle('hide',!CFG.showMock);
+  tray.classList.toggle('hide',!CFG.showTray);
   if(!CFG.seenMode) document.querySelectorAll('.card.seen').forEach(el=>el.classList.remove('seen'));
   repaint();
   const n=$('#aLayoutNote'); if(n){ n.textContent=`${P.note}Now: ${P.tiles} tiles = ${P.pairs} product pairs + ${P.sur} surprises.`; n.classList.toggle('bad',!!P.note); }
@@ -533,7 +533,8 @@ function renderTray(){
   tray.innerHTML = '<span class="lbl">Unlocked</span>' + (S.won.length
     ? S.won.map(PR).map(p=>`<span class="chip">${esc(p.name)}<i>${esc(p.offer)}</i></span>`).join('')
     : '<span class="empty">Match two tiles to reveal the first offer</span>');
-  tray.scrollLeft = tray.scrollWidth;
+  tray.classList.toggle('many',S.won.length>5); tray.classList.toggle('lots',S.won.length>10);
+  layout();                             // the strip may have grown a row: refit the board
 }
 
 /* ---------- play ---------- */
