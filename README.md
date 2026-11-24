@@ -39,8 +39,11 @@ stay on that one device.
 When served by `server.js`:
 
 - Any settings change made in any admin panel is saved on the server and pushed to every
-  open screen. Changes to the layout, tile backs, products or surprises reshuffle the board
-  on every screen.
+  open screen as it is made, including while typing or dragging a slider.
+- Styling, colours, tile symbols, logos, product names, offers, images and surprise text are
+  applied in place: the round in progress is not disturbed and open tiles stay open.
+- Only changing the grid (tiles across, tiles down, surprise count) or adding / deleting a
+  product or surprise deals a new board on every screen.
 - The admin panel's round buttons act on every screen: flip all tiles back, reshuffle a new
   round, peek, back to start screen, start the game.
 - The reset menu on a screen itself (circular arrow) only affects that screen.

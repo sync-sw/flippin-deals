@@ -338,7 +338,7 @@ const ICONS = {
   book:'<rect x="9" y="9" width="30" height="21" rx="2"/><path d="M3 37h42l-4-6H7z"/>',
   box:'<path d="M6 14l18-8 18 8v20l-18 8-18-8z"/><path d="M6 14l18 8 18-8M24 22v20"/>',
 };
-/* admin form: [section, open?, fields]   s:1 = changing it rebuilds the board */
+/* admin form: [section, open?, fields]   s:1 = changing it deals a new board (grid size only) */
 const FORM = [
   ['Layout', true, [
     {k:'cols',t:'range',min:2,max:8,l:'Tiles across',s:1},
@@ -363,14 +363,14 @@ const FORM = [
     {k:'radius',t:'range',min:0,max:50,u:'%',l:'Corner rounding'},
   ]],
   ['Tile backs & logo', false, [
-    {k:'symbol',t:'text',l:'Symbol or word on tile backs',s:1},
-    {k:'label',t:'text',l:'Alternate label on some tiles',s:1},
-    {k:'labelFreq',t:'range',min:0,max:100,step:5,u:'%',l:'How many tiles show the alternate label',s:1},
-    {k:'c1',on:'c1on',t:'coloron',l:'Tile colour 1',s:1},
-    {k:'c2',on:'c2on',t:'coloron',l:'Tile colour 2',s:1},
-    {k:'c3',on:'c3on',t:'coloron',l:'Tile colour 3',s:1},
+    {k:'symbol',t:'text',l:'Symbol or word on tile backs'},
+    {k:'label',t:'text',l:'Alternate label on some tiles'},
+    {k:'labelFreq',t:'range',min:0,max:100,step:5,u:'%',l:'How many tiles show the alternate label'},
+    {k:'c1',on:'c1on',t:'coloron',l:'Tile colour 1'},
+    {k:'c2',on:'c2on',t:'coloron',l:'Tile colour 2'},
+    {k:'c3',on:'c3on',t:'coloron',l:'Tile colour 3'},
     {t:'logo'},
-    {k:'logoBacks',t:'check',l:'Show logo on tile backs instead of the symbol',s:1},
+    {k:'logoBacks',t:'check',l:'Show logo on tile backs instead of the symbol'},
     {k:'logoHeader',t:'check',l:'Show logo in header and start screen'},
   ]],
   ['Animation & behaviour', false, [
@@ -403,7 +403,7 @@ let CFG = clone(DEFAULTS);
 try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) CFG=Object.assign(clone(DEFAULTS),s); }catch(e){}
 function save(){
   let ok=true; try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){ ok=false; }
-  if(REMOTE){ clearTimeout(pushT); pushT=setTimeout(pushCfg,200); }
+  if(REMOTE){ clearTimeout(pushT); pushT=setTimeout(pushCfg,100); }
   else msg(ok?'Saved':'Not saved on this device – use Export');
 }
 let msgT; function msg(t){ $('#saveMsg').textContent=t; clearTimeout(msgT); msgT=setTimeout(()=>$('#saveMsg').textContent='',2500); }
@@ -440,27 +440,45 @@ const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)
 const art = p => p.img ? `<img class="pi" src="${p.img}" alt="">` : `<svg viewBox="0 0 48 48">${ICONS[p.icon]||ICONS.box}</svg>`;
 
 /* ---------- build a round ---------- */
+const PR = id => CFG.products[id] || {name:'',offer:'',note:'',icon:'box',img:''};
+const SU = c  => CFG.surprises[c.si] || {title:'Surprise!',text:''};
 function newGame(){
   const P = plan();
-  const prods = shuffle(CFG.products.map((p,i)=>({...p,id:i}))).slice(0,P.pairs);
-  const pool  = CFG.surprises.length ? shuffle(CFG.surprises.slice()) : [{title:'Surprise!',text:''}];
-  const surs  = Array.from({length:P.sur},(_,i)=>pool[i%pool.length]);
-  const deck  = shuffle([...prods.map(p=>({t:'p',p})), ...prods.map(p=>({t:'p',p})), ...surs.map(s=>({t:'s',s}))]);
-  S = {deck, pairs:P.pairs, first:null, lock:false, turns:0, matches:0, won:[]};
-  let cols = [1,2,3].filter(n=>CFG['c'+n+'on']).map(n=>CFG['c'+n]); if(!cols.length) cols=[CFG.c1];
-  board.innerHTML = deck.map((c,i)=>{
-    const col = cols[Math.random()*cols.length|0];
-    const sym = esc(CFG.symbol||'?');
-    const back = CFG.logoBacks && CFG.logo ? `<img src="${CFG.logo}" alt="">`
-      : (CFG.label && Math.random()*100<CFG.labelFreq) ? `<span class="bf">${esc(CFG.label).replace(/ /,'<br>')}</span>`
-      : `<span class="q ${[...(CFG.symbol||'?')].length>2?'long':''}">${sym}</span>`;
-    const front = c.t==='p'
-      ? `<div class="face front">${art(c.p)}<span class="nm">${esc(c.p.name)}</span></div>`
-      : `<div class="face front sur"><span class="star">★</span><span class="nm">Surprise</span></div>`;
-    return `<button class="card" data-i="${i}" aria-label="Tile ${i+1}"><div class="inner"><div class="face back ${isLight(col)?'lt':''}" data-c="${col}" style="--c:${col}">${back}</div>${front}</div></button>`;
-  }).join('');
-  layout(); stats(); renderTray();
+  const ids  = shuffle(CFG.products.map((p,i)=>i)).slice(0,P.pairs);
+  const pool = shuffle(CFG.surprises.map((x,i)=>i));
+  const surs = Array.from({length:P.sur},(_,i)=>pool.length?pool[i%pool.length]:-1);
+  // each tile keeps its own colour slot (ci) and a random number (r) so restyling never moves anything
+  const deck = shuffle([...ids.map(id=>({t:'p',id})), ...ids.map(id=>({t:'p',id})), ...surs.map(si=>({t:'s',si}))])
+               .map(c=>Object.assign(c,{ci:1+(Math.random()*3|0), r:Math.random()*100}));
+  S = {deck, pairs:P.pairs, first:null, lock:false, turns:0, matches:0, won:[], deal:-1};
+  board.innerHTML = deck.map((c,i)=>`<button class="card" data-i="${i}" aria-label="Tile ${i+1}"><div class="inner"><div class="face back"></div><div class="face front ${c.t==='s'?'sur':''}"></div></div></button>`).join('');
+  repaint(); layout(); stats();
 }
+function tileCol(c){                    // the tile's colour slot, or the next enabled one if that slot is switched off
+  const on=[1,2,3].filter(n=>CFG['c'+n+'on']);
+  return CFG['c'+(on.length ? (on.indexOf(c.ci)>=0 ? c.ci : on[c.ci%on.length]) : 1)];
+}
+function backHTML(c){
+  const sym=CFG.symbol||'?';
+  return CFG.logoBacks && CFG.logo ? `<img src="${CFG.logo}" alt="">`
+    : (CFG.label && c.r<CFG.labelFreq) ? `<span class="bf">${esc(CFG.label).replace(/ /,'<br>')}</span>`
+    : `<span class="q ${[...sym].length>2?'long':''}">${esc(sym)}</span>`;
+}
+function frontHTML(c){
+  return c.t==='p' ? `${art(PR(c.id))}<span class="nm">${esc(PR(c.id).name)}</span>` : `<span class="star">★</span><span class="nm">Surprise</span>`;
+}
+function repaint(){                     // restyle the current round in place: no reshuffle, open tiles stay open
+  if(!S) return;
+  board.querySelectorAll('.card').forEach(el=>{
+    const c=S.deck[+el.dataset.i], bk=el.querySelector('.back'), fr=el.querySelector('.front'), bh=backHTML(c), fh=frontHTML(c);
+    if(c.bh!==bh){ bk.innerHTML=bh; c.bh=bh; }
+    if(c.fh!==fh){ fr.innerHTML=fh; c.fh=fh; }
+    bk.dataset.c=tileCol(c); paintSeen(el);
+  });
+  renderTray();
+  if($('#ovDeal').classList.contains('on')) showDeal();
+}
+function showDeal(){ const p=PR(S.deal); $('#dIcon').innerHTML=art(p); $('#dName').textContent=p.name; $('#dOffer').textContent=p.offer; $('#dNote').textContent=p.note; }
 
 function layout(){
   const W=stage.clientWidth, H=stage.clientHeight; if(!W||!H) return;
@@ -499,8 +517,8 @@ function apply(){
   $('#stM').classList.toggle('hide',!CFG.showStats); $('#stT').classList.toggle('hide',!CFG.showStats);
   document.querySelector('header').classList.toggle('nobtn',!!CFG.hideBtns);
   tray.classList.toggle('hide',!CFG.showTray); $('#mock').classList.toggle('hide',!CFG.showMock);
-  document.querySelectorAll('.card.seen').forEach(paintSeen);
-  if(!CFG.seenMode) document.querySelectorAll('.card.seen').forEach(el=>{ el.classList.remove('seen'); paintSeen(el); });
+  if(!CFG.seenMode) document.querySelectorAll('.card.seen').forEach(el=>el.classList.remove('seen'));
+  repaint();
   const n=$('#aLayoutNote'); if(n){ n.textContent=`${P.note}Now: ${P.tiles} tiles = ${P.pairs} product pairs + ${P.sur} surprises.`; n.classList.toggle('bad',!!P.note); }
   const pn=$('#aProdNote'); if(pn) pn.textContent=`${CFG.products.length} products. This layout uses ${P.pairs} per round, picked at random.`;
   layout();
@@ -513,7 +531,7 @@ function paintSeen(el){
 function stats(){ $('#sMatch').textContent=`${S.matches}/${S.pairs}`; $('#sTurn').textContent=S.turns; }
 function renderTray(){
   tray.innerHTML = '<span class="lbl">Unlocked</span>' + (S.won.length
-    ? S.won.map(p=>`<span class="chip">${esc(p.name)}<i>${esc(p.offer)}</i></span>`).join('')
+    ? S.won.map(PR).map(p=>`<span class="chip">${esc(p.name)}<i>${esc(p.offer)}</i></span>`).join('')
     : '<span class="empty">Match two tiles to reveal the first offer</span>');
   tray.scrollLeft = tray.scrollWidth;
 }
@@ -528,18 +546,18 @@ board.addEventListener('click',e=>{
   if(c.t==='s'){                      // surprise: reveal, the turn carries on
     S.lock = true; el.classList.add('done','sdone');
     setTimeout(()=>{ tone([660,880,1320],.14,'square'); burst('#ffd166');
-      $('#sTitle').textContent=c.s.title; $('#sText').textContent=c.s.text;
+      $('#sTitle').textContent=SU(c).title; $('#sText').textContent=SU(c).text;
       open('#ovSur',()=>{S.lock=false}); },F+50);
     return;
   }
   if(!S.first){ S.first = el; return; }
 
-  const a = S.first, pa = S.deck[+a.dataset.i].p; S.first=null; S.turns++; S.lock=true; stats();
-  if(pa.id===c.p.id){
+  const a = S.first, ida = S.deck[+a.dataset.i].id; S.first=null; S.turns++; S.lock=true; stats();
+  if(ida===c.id){
     setTimeout(()=>{
-      a.classList.add('done'); el.classList.add('done'); S.matches++; S.won.push(pa); stats(); renderTray();
+      a.classList.add('done'); el.classList.add('done'); S.matches++; S.won.push(ida); stats(); renderTray();
       tone([523,659,784,1047],.13); burst('#4f74ff');
-      $('#dIcon').innerHTML=art(pa); $('#dName').textContent=pa.name; $('#dOffer').textContent=pa.offer; $('#dNote').textContent=pa.note;
+      S.deal=ida; showDeal();
       open('#ovDeal',()=>{ S.lock=false; if(S.matches===S.pairs) finish(); });
     },F+100);
   }else{
@@ -554,7 +572,7 @@ board.addEventListener('click',e=>{
 
 function finish(){
   $('#eTurns').textContent=S.turns;
-  $('#eList').innerHTML=S.won.map(p=>`<div>${esc(p.name)}<i>${esc(p.offer)}</i></div>`).join('');
+  $('#eList').innerHTML=S.won.map(PR).map(p=>`<div>${esc(p.name)}<i>${esc(p.offer)}</i></div>`).join('');
   tone([523,659,784,1047,1319],.16); burst('#fff',160);
   $('#ovEnd').classList.add('on');
 }
@@ -651,7 +669,7 @@ $('#aPeek').onclick    = ()=>send('peek');
 $('#aStart').onclick   = ()=>{ if(!REMOTE) admin(false); send('home'); };
 $('#aPlay').onclick    = ()=>send('play');
 
-function changed(structural){ save(); apply(); if(structural){ closeOvs(); newGame(); } }
+function changed(deal){ save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
 
 function buildAdmin(){
   $('#aSecs').innerHTML = FORM.map(([name,open,fields])=>`<details ${open?'open':''}><summary>${name}</summary><div class="body">${fields.map(field).join('')}</div></details>`).join('');
@@ -663,7 +681,7 @@ function field(f){
     case 'range': return `<label class="f"><span>${f.l}<output>${v}${f.u||''}</output></span><input type="range" data-k="${f.k}" data-u="${f.u||''}" ${f.s?'data-s':''} ${f.lazy?'data-lazy':''} min="${f.min}" max="${f.max}" step="${f.step||1}" value="${v}"></label>`;
     case 'check': return `<label class="c"><input type="checkbox" data-k="${f.k}" ${f.s?'data-s':''} ${v?'checked':''}>${f.l}</label>`;
     case 'color': return `<label class="c"><input type="color" data-k="${f.k}" ${f.s?'data-s':''} value="${v}">${f.l}</label>`;
-    case 'coloron': return `<label class="c"><input type="checkbox" data-k="${f.on}" data-s ${CFG[f.on]?'checked':''}><input type="color" data-k="${f.k}" data-s value="${v}">${f.l}</label>`;
+    case 'coloron': return `<label class="c"><input type="checkbox" data-k="${f.on}" ${CFG[f.on]?'checked':''}><input type="color" data-k="${f.k}" value="${v}">${f.l}</label>`;
     case 'text': return `<label class="f"><span>${f.l}</span><input type="text" data-k="${f.k}" ${f.s?'data-s':''} value="${esc(v)}"></label>`;
     case 'presets': return `<div class="presets">${PRESETS.map((p,i)=>`<button class="btn" data-preset="${i}">${p[0]}</button>`).join('')}</div>`;
     case 'layoutnote': return `<div class="note" id="aLayoutNote"></div>`;
@@ -674,7 +692,6 @@ function field(f){
 }
 function onField(e){
   const el=e.target, k=el.dataset.k; if(!k || el.closest('.item')) return;
-  if(el.type==='text' && e.type==='input') return;            // text commits on change
   if(el.type==='range') el.closest('label').querySelector('output').textContent=el.value+el.dataset.u;
   if(el.type==='range' && ('lazy' in el.dataset) !== (e.type==='change')) return;   // lazy sliders apply on release
   CFG[k] = el.type==='checkbox' ? el.checked : el.type==='range' ? +el.value : el.value;
@@ -685,8 +702,8 @@ $('#aSecs').addEventListener('change',onField);
 $('#aSecs').addEventListener('click',e=>{
   const p=e.target.closest('[data-preset]');
   if(p){ const [,c,r,s]=PRESETS[+p.dataset.preset]; Object.assign(CFG,{cols:c,rows:r,sur:s}); buildAdmin(); changed(true); return; }
-  if(e.target.closest('[data-up=logo]')) pickImage(600,d=>{ CFG.logo=d; buildAdmin(); changed(true); });
-  if(e.target.closest('[data-rmlogo]')){ CFG.logo=''; buildAdmin(); changed(true); }
+  if(e.target.closest('[data-up=logo]')) pickImage(600,d=>{ CFG.logo=d; buildAdmin(); changed(false); });
+  if(e.target.closest('[data-rmlogo]')){ CFG.logo=''; buildAdmin(); changed(false); }
 });
 
 /* products */
@@ -699,12 +716,12 @@ function renderProds(){
     <div class="row">${p.img?`<img src="${p.img}" alt="">`:''}<button class="btn" data-act="img" style="flex:1">${p.img?'Replace image':'Upload product image'}</button>${p.img?'<button class="btn" data-act="noimg">Use icon</button>':''}<button class="btn warn" data-act="del">Delete</button></div>
   </div>`).join('');
 }
-$('#aProds').addEventListener('change',e=>{ const it=e.target.closest('.item'), k=e.target.dataset.pk; if(!it||!k) return; CFG.products[+it.dataset.i][k]=e.target.value; changed(true); });
+['input','change'].forEach(ev=>$('#aProds').addEventListener(ev,e=>{ const it=e.target.closest('.item'), k=e.target.dataset.pk; if(!it||!k) return; CFG.products[+it.dataset.i][k]=e.target.value; changed(false); }));
 $('#aProds').addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return; const i=+b.closest('.item').dataset.i;
   if(b.dataset.act==='del'){ if(CFG.products.length<=1) return msg('Keep at least one product'); CFG.products.splice(i,1); renderProds(); changed(true); }
-  if(b.dataset.act==='noimg'){ CFG.products[i].img=''; renderProds(); changed(true); }
-  if(b.dataset.act==='img') pickImage(320,d=>{ CFG.products[i].img=d; renderProds(); changed(true); });
+  if(b.dataset.act==='noimg'){ CFG.products[i].img=''; renderProds(); changed(false); }
+  if(b.dataset.act==='img') pickImage(320,d=>{ CFG.products[i].img=d; renderProds(); changed(false); });
 });
 $('#aAddProd').onclick=()=>{ CFG.products.push({name:'New product',icon:'box',offer:'XX% OFF',note:'',img:''}); renderProds(); changed(true); $('#aProds').lastElementChild.scrollIntoView({block:'center'}); };
 
@@ -716,7 +733,7 @@ function renderSurs(){
     <div class="row"><span></span><button class="btn warn" data-act="del">Delete</button></div>
   </div>`).join('');
 }
-$('#aSurs').addEventListener('change',e=>{ const it=e.target.closest('.item'), k=e.target.dataset.sk; if(!it||!k) return; CFG.surprises[+it.dataset.i][k]=e.target.value; changed(true); });
+['input','change'].forEach(ev=>$('#aSurs').addEventListener(ev,e=>{ const it=e.target.closest('.item'), k=e.target.dataset.sk; if(!it||!k) return; CFG.surprises[+it.dataset.i][k]=e.target.value; changed(false); }));
 $('#aSurs').addEventListener('click',e=>{ const b=e.target.closest('[data-act=del]'); if(!b) return; CFG.surprises.splice(+b.closest('.item').dataset.i,1); renderSurs(); changed(true); });
 $('#aAddSur').onclick=()=>{ CFG.surprises.push({title:'New surprise',text:''}); renderSurs(); changed(true); $('#aSurs').lastElementChild.scrollIntoView({block:'center'}); };
 
@@ -754,13 +771,12 @@ $('#fImport').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) r
    ===================================================================== */
 const CID=Math.random().toString(36).slice(2);          // identifies this device so it ignores its own echoes
 let REMOTE=false, pushT=0;
-const STRUCT=['cols','rows','sur','symbol','label','labelFreq','c1','c2','c3','c1on','c2on','c3on','logo','logoBacks','products','surprises'];
 const post=(url,method,body)=>fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{ if(!r.ok) throw 0; return r.json(); });
 function net(text,cls){ const n=$('#netMsg'); n.textContent=text; n.className='net '+(cls||''); }
 function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
 function takeCfg(cfg){                                  // settings arriving from the server
   const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
-  const rebuild=STRUCT.some(k=>JSON.stringify(old[k])!==JSON.stringify(CFG[k]));
+  const rebuild=['cols','rows','sur'].some(k=>old[k]!==CFG[k]) || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
   try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
   const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();
