@@ -44,9 +44,18 @@ When served by `server.js`:
   applied in place: the round in progress is not disturbed and open tiles stay open.
 - Only changing the grid (tiles across, tiles down, surprise count) or adding / deleting a
   product or surprise deals a new board on every screen.
-- The admin panel's round buttons act on every screen: flip all tiles back, reshuffle a new
-  round, peek, back to start screen, start the game.
-- The reset menu on a screen itself (circular arrow) only affects that screen.
+- Every screen deals the same board: the tile layout comes from a seed stored with the
+  settings, so the admin preview always matches the game screens. A reshuffle (from the admin
+  page, a screen's reset menu, or "Play again") gives every screen the same new layout.
+  Which tiles are open is not shared; each screen tracks its own play.
+- The admin page's round buttons act on every screen: flip all tiles back, reshuffle a new
+  round, peek on all screens, back to start screen, start the game.
+- "Show answers here only" turns the admin preview face-up as a host cheat sheet. Game
+  screens are not affected.
+- "Flip all tiles back" and "Back to start screen" in a screen's own reset menu only affect
+  that screen.
+- Audio: sound effects on/off and volume are shared settings. Each screen plays through its
+  own speakers after its first touch; the admin page stays silent apart from its test button.
 - The admin header shows how many devices are connected. Screens reconnect on their own and
   pick up the current settings if the server restarts.
 

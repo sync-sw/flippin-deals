@@ -58,7 +58,7 @@
     box-shadow:0 20px 60px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.5)}
   .card{position:relative;perspective:900px;border-radius:var(--rad)}
   .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform var(--flip) cubic-bezier(.3,1.3,.5,1)}
-  .card.up .inner,.board.peek .inner{transform:rotateY(180deg)}
+  .card.up .inner,.board.peek .inner,.board.reveal .inner{transform:rotateY(180deg)}
   .card:active .inner{scale:.95}
   .face{position:absolute;inset:0;border-radius:var(--rad);backface-visibility:hidden;-webkit-backface-visibility:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;text-align:center}
@@ -259,7 +259,8 @@
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
       <button class="btn pri" id="aShuffle">Reshuffle new round</button>
-      <button class="btn" id="aPeek">Peek at all tiles (3s)</button>
+      <button class="btn" id="aReveal">Show answers here only</button>
+      <button class="btn" id="aPeek">Peek on all screens (3s)</button>
       <button class="btn" id="aStart">Back to start screen</button>
       <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
@@ -291,13 +292,13 @@
 const DEFAULTS = {
   kicker:'Samsung Black Friday', title:'Flippin Deals',
   blurb:'Flip two tiles. Match a product to unlock its Black Friday offer. Watch out for surprise cards.',
-  cols:4, rows:5, sur:4, boardScale:100, boardY:50,
+  cols:4, rows:5, sur:4, seed:1, boardScale:100, boardY:50,
   uiAuto:true, uiScale:100, admScale:100, tileText:100, aspect:100, gap:10, radius:12, frame:'#c9d0de',
   symbol:'?', label:'Black Friday', labelFreq:20,
   c1:'#2447f0', c1on:true, c2:'#0a0f2a', c2on:true, c3:'#d9dee8', c3on:true,
   logo:'', logoBacks:false, logoHeader:true,
   flipMs:500, mismatchMs:1100, seenMode:false, seenColor:'#6b7390', autoClose:0,
-  holdLock:false, hideBtns:false, sound:true, confetti:true, showStats:true, showTray:true,
+  holdLock:false, hideBtns:false, sound:true, volume:70, confetti:true, showStats:true, showTray:true,
   products:[
     {name:'Galaxy S Ultra',    icon:'phone',   offer:'XX% OFF', note:'Plus trade-in bonus – today only', img:''},
     {name:'Galaxy Z Fold',     icon:'fold',    offer:'XX% OFF', note:'Free storage upgrade', img:''},
@@ -380,10 +381,14 @@ const FORM = [
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
     {k:'holdLock',t:'check',l:'Kiosk lock: the reset button on game screens needs a 1-second press-and-hold'},
     {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the game title shows or hides them)'},
-    {k:'sound',t:'check',l:'Sound effects'},
     {k:'confetti',t:'check',l:'Confetti'},
     {k:'showStats',t:'check',l:'Show matches / turns counters'},
     {k:'showTray',t:'check',l:'Show unlocked-offers strip'},
+  ]],
+  ['Audio', false, [
+    {k:'sound',t:'check',l:'Sound effects on game screens'},
+    {k:'volume',t:'range',min:0,max:100,step:5,u:'%',l:'Volume'},
+    {t:'testsound'},
   ]],
   ['Titles & text', false, [
     {k:'kicker',t:'text',l:'Small heading'},
@@ -411,14 +416,15 @@ let S = null, afterClose = null, autoT = 0;
 
 /* ---------- sound ---------- */
 let ac;
-function tone(freqs, dur=.12, type='sine'){
-  if(!CFG.sound) return;
+function tone(freqs, dur=.12, type='sine', force){
+  if(!force && (!CFG.sound || ADMIN)) return;      // the admin page stays silent apart from its test button
+  const vol=Math.max(.0002,.3*(CFG.volume==null?70:CFG.volume)/100);
   try{
     ac = ac || new (window.AudioContext||window.webkitAudioContext)();
     freqs.forEach((f,i)=>{
       const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime+i*dur*.8;
       o.type=type; o.frequency.value=f; g.gain.setValueAtTime(.0001,t);
-      g.gain.exponentialRampToValueAtTime(.18,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+      g.gain.exponentialRampToValueAtTime(vol,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
       o.connect(g).connect(ac.destination); o.start(t); o.stop(t+dur+.02);
     });
   }catch(e){}
@@ -434,20 +440,25 @@ function plan(){
   return {tiles,pairs,sur,note};
 }
 const isLight = hex => { const n=parseInt(hex.slice(1),16); return ((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000 > 150; };
-const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]} return a };
+const shuffle = (a,rnd=Math.random) => { for(let i=a.length-1;i>0;i--){const j=rnd()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]} return a };
+/* Every screen deals its board from CFG.seed, so the TV and the admin page always have the same
+   tiles in the same places. A reshuffle is just a new seed pushed to everyone. */
+function seeded(a){ return ()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const newSeed = () => 1+(Math.random()*2147483646|0);
+function reseed(){ CFG.seed=newSeed(); save(); closeOvs(); newGame(); toast('New round'); }
 const art = p => p.img ? `<img class="pi" src="${p.img}" alt="">` : `<svg viewBox="0 0 48 48">${ICONS[p.icon]||ICONS.box}</svg>`;
 
 /* ---------- build a round ---------- */
 const PR = id => CFG.products[id] || {name:'',offer:'',note:'',icon:'box',img:''};
 const SU = c  => CFG.surprises[c.si] || {title:'Surprise!',text:''};
 function newGame(){
-  const P = plan();
-  const ids  = shuffle(CFG.products.map((p,i)=>i)).slice(0,P.pairs);
-  const pool = shuffle(CFG.surprises.map((x,i)=>i));
+  const P = plan(), rnd = seeded(CFG.seed||1);
+  const ids  = shuffle(CFG.products.map((p,i)=>i),rnd).slice(0,P.pairs);
+  const pool = shuffle(CFG.surprises.map((x,i)=>i),rnd);
   const surs = Array.from({length:P.sur},(_,i)=>pool.length?pool[i%pool.length]:-1);
   // each tile keeps its own colour slot (ci) and a random number (r) so restyling never moves anything
-  const deck = shuffle([...ids.map(id=>({t:'p',id})), ...ids.map(id=>({t:'p',id})), ...surs.map(si=>({t:'s',si}))])
-               .map(c=>Object.assign(c,{ci:1+(Math.random()*3|0), r:Math.random()*100}));
+  const deck = shuffle([...ids.map(id=>({t:'p',id})), ...ids.map(id=>({t:'p',id})), ...surs.map(si=>({t:'s',si}))],rnd)
+               .map(c=>Object.assign(c,{ci:1+(rnd()*3|0), r:rnd()*100}));
   S = {deck, pairs:P.pairs, first:null, lock:false, turns:0, matches:0, won:[], deal:-1};
   board.innerHTML = deck.map((c,i)=>`<button class="card" data-i="${i}" aria-label="Tile ${i+1}"><div class="inner"><div class="face back"></div><div class="face front ${c.t==='s'?'sur':''}"></div></div></button>`).join('');
   repaint(); layout(); stats();
@@ -594,7 +605,7 @@ function closeOv(ov){ if(!ov.classList.contains('on')) return; clearTimeout(auto
 function closeOvs(){ clearTimeout(autoT); afterClose=null; document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on')); }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-close]'); if(b) closeOv(b.closest('.ov')); });
 function home(){ closeOvs(); $('#start').classList.remove('off'); }
-$('#bAgain').onclick = ()=>{ $('#ovEnd').classList.remove('on'); newGame(); };
+$('#bAgain').onclick = reseed;
 $('#bPlay').onclick  = ()=>{ $('#start').classList.add('off'); tone([523,784],.1); newGame(); };
 
 /* ---------- host controls ----------
@@ -619,7 +630,7 @@ $('#bFull').onclick = ()=>{ const d=document; (d.fullscreenElement? d.exitFullsc
 function resetMenu(){ if(!S) return home(); clearTimeout(autoT); $('#ovReset').classList.add('on'); }
 const rClose = ()=>$('#ovReset').classList.remove('on');
 $('#rFlip').onclick    = ()=>{ flipAllBack(); toast('All tiles flipped back'); };
-$('#rShuffle').onclick = ()=>{ closeOvs(); newGame(); toast('New round'); };
+$('#rShuffle').onclick = reseed;
 $('#rHome').onclick    = home;
 $('#rCancel').onclick  = rClose;
 /* tap the title (small heading or game title) to hide / show the three top buttons */
@@ -664,12 +675,15 @@ function admin(on){
   layout(); setTimeout(layout,50);
 }
 $('#aFlipBack').onclick= ()=>send('flipBack');
-$('#aShuffle').onclick = ()=>send('shuffle');
+$('#aShuffle').onclick = reseed;
 $('#aPeek').onclick    = ()=>send('peek');
+$('#aReveal').onclick  = e=>{                 // host cheat sheet: only this admin page, stays on until switched off
+  const on=board.classList.toggle('reveal'); e.currentTarget.textContent=on?'Hide answers here':'Show answers here only'; e.currentTarget.classList.toggle('pri',on);
+};
 $('#aStart').onclick   = ()=>send('home');
 $('#aPlay').onclick    = ()=>send('play');
 
-function changed(deal){ save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
+function changed(deal){ if(deal) CFG.seed=newSeed(); save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
 
 function buildAdmin(){
   $('#aSecs').innerHTML = FORM.map(([name,open,fields])=>`<details ${open?'open':''}><summary>${name}</summary><div class="body">${fields.map(field).join('')}</div></details>`).join('');
@@ -686,6 +700,7 @@ function field(f){
     case 'presets': return `<div class="presets">${PRESETS.map((p,i)=>`<button class="btn" data-preset="${i}">${p[0]}</button>`).join('')}</div>`;
     case 'layoutnote': return `<div class="note" id="aLayoutNote"></div>`;
     case 'screennote': return `<div class="note" id="aScreenNote"></div>`;
+    case 'testsound': return `<button class="btn" data-testsound>Play a test sound on this device</button><div class="note">Each screen plays through its own speakers, and only after it has been touched once (browsers block audio until then). The admin page itself stays silent.</div>`;
     case 'logo': return `<div class="row"><img class="logoprev ${CFG.logo?'':'hide'}" id="aLogoPrev" src="${CFG.logo||''}" alt=""><button class="btn" data-up="logo" style="flex:1">${CFG.logo?'Replace logo':'Upload logo'}</button>${CFG.logo?'<button class="btn warn" data-rmlogo>Remove</button>':''}</div>`;
   }
   return '';
@@ -702,6 +717,7 @@ $('#aSecs').addEventListener('change',onField);
 $('#aSecs').addEventListener('click',e=>{
   const p=e.target.closest('[data-preset]');
   if(p){ const [,c,r,s]=PRESETS[+p.dataset.preset]; Object.assign(CFG,{cols:c,rows:r,sur:s}); buildAdmin(); changed(true); return; }
+  if(e.target.closest('[data-testsound]')) tone([523,659,784,1047],.13,'sine',true);
   if(e.target.closest('[data-up=logo]')) pickImage(600,d=>{ CFG.logo=d; buildAdmin(); changed(false); });
   if(e.target.closest('[data-rmlogo]')){ CFG.logo=''; buildAdmin(); changed(false); }
 });
@@ -776,7 +792,7 @@ function net(text,cls){ const n=$('#netMsg'); if(!n) return; n.textContent=text;
 function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
 function takeCfg(cfg){                                  // settings arriving from the server
   const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
-  const rebuild=['cols','rows','sur'].some(k=>old[k]!==CFG[k]) || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
+  const rebuild=['seed','cols','rows','sur'].some(k=>old[k]!==CFG[k]) || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
   try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
   const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();
@@ -784,7 +800,6 @@ function takeCfg(cfg){                                  // settings arriving fro
 }
 const CMDS={
   flipBack:()=>{ if(S){ flipAllBack(); toast('All tiles flipped back'); } },
-  shuffle :()=>{ closeOvs(); newGame(); toast('New round'); },
   peek    :()=>{ if(S) peek(); },
   home    :()=>{ if(!ADMIN) home(); },
   play    :()=>{ if(!ADMIN && !$('#start').classList.contains('off')){ $('#start').classList.add('off'); newGame(); } },
