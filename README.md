@@ -23,16 +23,16 @@ or, without Docker (Node 18 or newer, no dependencies to install):
 node server.js
 ```
 
-- Game: `http://<host>:8080/`
-- Admin panel: `http://<host>:8080/admin`
+- Game: `http://<host>:8080/` (no options on this page)
+- Admin page: `http://<host>:8080/admin` (all options, with a preview board)
 - Settings are stored in `/data/config.json` (a Docker volume), so they survive restarts.
 - `PORT` and `DATA_DIR` environment variables change the port and the storage folder.
 
 The server has **no login**: anyone who can reach the address can open the admin panel and
 change the game. Keep it on a private network, or put it behind something that restricts access.
 
-**As a single file.** Open `index.html` directly in a browser. Everything works, but settings
-stay on that one device.
+**As a single file.** Open `index.html` directly in a browser to play. With no server, the
+options are at `index.html#admin` and stay on that one device.
 
 ## Remote control
 
@@ -55,14 +55,12 @@ Endpoints: `GET /api/state`, `PUT /api/config`, `POST /api/command`, `GET /api/e
 
 ## Controls
 
-- **Settings** (sliders button, top right): opens the admin panel. On the start screen it needs a
-  1-second press-and-hold; in the game it is a single tap.
 - **Reset** (circular arrow): flip all tiles back, reshuffle a new round, or return to the start screen.
 - **Fullscreen** (corner brackets).
 - **Hide the top buttons**: tap the game title (or the small heading above it) to hide or show
   the three buttons. The state is remembered on that device.
 
-Add `#admin` to the URL to open straight into the admin panel.
+The game page has no settings button. All options are on the admin page.
 
 ## Admin panel
 
@@ -73,7 +71,7 @@ Add `#admin` to the URL to open straight into the admin panel.
 - Tiles: tile width, gap, corner rounding.
 - Tile backs: symbol, alternate label and its frequency, three tile colours, logo upload.
 - Behaviour: flip speed, mismatch time, "already opened" tile colour, auto-close pop-ups,
-  sound, confetti, counters, kiosk lock (press-and-hold for reset and settings).
+  sound, confetti, counters, kiosk lock (press-and-hold for the reset button).
 - Content: products (name, offer, detail line, icon or image), surprise cards, titles.
 - Export / import settings as JSON to move a configuration between devices.
 

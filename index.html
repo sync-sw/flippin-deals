@@ -200,7 +200,6 @@
     <div class="stat" id="stT"><b id="sTurn">0</b><span>Turns</span></div>
     <button class="ibtn" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="bHome" aria-label="Reset"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg></button>
-    <button class="ibtn" id="bAdm" aria-label="Settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   </header>
   <div class="stage" id="stage"><div class="board" id="board"></div></div>
   <div class="tray" id="tray"></div>
@@ -245,7 +244,6 @@
 <div class="toast" id="toast"></div>
 
 <div class="start" id="start">
-  <button class="ibtn" id="bAdm2" aria-label="Settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   <img class="slogo hide" id="sLogo" alt="">
   <small id="stKicker"></small>
   <h1 id="stTitle"></h1>
@@ -256,7 +254,7 @@
 
 <!-- ======================= ADMIN ======================= -->
 <aside class="adm" id="adm">
-  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span><button id="aClose">Done</button></div>
+  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span></div>
   <div class="scroll"><div class="zin">
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
@@ -380,7 +378,7 @@ const FORM = [
     {k:'seenMode',t:'check',l:'Tiles come back a different colour once they have been opened'},
     {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
-    {k:'holdLock',t:'check',l:'Kiosk lock: in-game reset and settings also need a 1-second press-and-hold'},
+    {k:'holdLock',t:'check',l:'Kiosk lock: the reset button on game screens needs a 1-second press-and-hold'},
     {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the game title shows or hides them)'},
     {k:'sound',t:'check',l:'Sound effects'},
     {k:'confetti',t:'check',l:'Confetti'},
@@ -406,7 +404,7 @@ function save(){
   if(REMOTE){ clearTimeout(pushT); pushT=setTimeout(pushCfg,100); }
   else msg(ok?'Saved':'Not saved on this device – use Export');
 }
-let msgT; function msg(t){ $('#saveMsg').textContent=t; clearTimeout(msgT); msgT=setTimeout(()=>$('#saveMsg').textContent='',2500); }
+let msgT; function msg(t){ const m=$('#saveMsg'); if(!m) return; m.textContent=t; clearTimeout(msgT); msgT=setTimeout(()=>{ m.textContent=''; },2500); }
 
 const board = $('#board'), stage = $('#stage'), tray = $('#tray');
 let S = null, afterClose = null, autoT = 0;
@@ -631,8 +629,6 @@ document.querySelector('.brand').addEventListener('click',e=>{
   const c=$('#aSecs [data-k="hideBtns"]'); if(c) c.checked=CFG.hideBtns;
 });
 press($('#bHome'),resetMenu);
-press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')));
-press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);   // start screen faces the audience: always a hold
 document.addEventListener('contextmenu',e=>{ if(!e.target.closest('.adm')) e.preventDefault(); });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
@@ -658,16 +654,19 @@ function step(){
 /* =====================================================================
    ADMIN PANEL
    ===================================================================== */
+/* The options live only on the admin page: /admin when served by server.js, or index.html#admin
+   when the file is opened directly. The game page has no way into them. */
+const ADMIN = /\/admin\/?$/.test(location.pathname) || (location.protocol==='file:' && location.hash==='#admin');
 function admin(on){
+  if(!ADMIN) return;
   document.body.classList.toggle('admin',on);
   if(on){ if(!S) newGame(); buildAdmin(); }
   layout(); setTimeout(layout,50);
 }
-$('#aClose').onclick   = ()=>admin(false);
 $('#aFlipBack').onclick= ()=>send('flipBack');
 $('#aShuffle').onclick = ()=>send('shuffle');
 $('#aPeek').onclick    = ()=>send('peek');
-$('#aStart').onclick   = ()=>{ if(!REMOTE) admin(false); send('home'); };
+$('#aStart').onclick   = ()=>send('home');
 $('#aPlay').onclick    = ()=>send('play');
 
 function changed(deal){ save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
@@ -773,7 +772,7 @@ $('#fImport').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) r
 const CID=Math.random().toString(36).slice(2);          // identifies this device so it ignores its own echoes
 let REMOTE=false, pushT=0;
 const post=(url,method,body)=>fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{ if(!r.ok) throw 0; return r.json(); });
-function net(text,cls){ const n=$('#netMsg'); n.textContent=text; n.className='net '+(cls||''); }
+function net(text,cls){ const n=$('#netMsg'); if(!n) return; n.textContent=text; n.className='net '+(cls||''); }
 function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
 function takeCfg(cfg){                                  // settings arriving from the server
   const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
@@ -787,17 +786,17 @@ const CMDS={
   flipBack:()=>{ if(S){ flipAllBack(); toast('All tiles flipped back'); } },
   shuffle :()=>{ closeOvs(); newGame(); toast('New round'); },
   peek    :()=>{ if(S) peek(); },
-  home    :()=>{ if(!document.body.classList.contains('admin')) home(); },
-  play    :()=>{ if(!$('#start').classList.contains('off')){ $('#start').classList.add('off'); newGame(); } },
+  home    :()=>{ if(!ADMIN) home(); },
+  play    :()=>{ if(!ADMIN && !$('#start').classList.contains('off')){ $('#start').classList.add('off'); newGame(); } },
 };
 function send(cmd){                                     // run here, and on every other screen when connected
-  if(cmd==='home' && !REMOTE) home(); else CMDS[cmd]();
+  CMDS[cmd]();
   if(REMOTE) post('api/command','POST',{from:CID,cmd}).catch(()=>msg('Could not reach the server'));
 }
 function connect(){
   fetch('api/state').then(r=>{ if(!r.ok || !/json/.test(r.headers.get('content-type')||'')) throw 0; return r.json(); }).then(st=>{
     REMOTE=true;
-    $('#aSaveNote').textContent='Settings are stored on the server and shared by every screen. Export / import is for backups.';
+    if(ADMIN) $('#aSaveNote').textContent='Settings are stored on the server and shared by every screen. Export / import is for backups.';
     if(st.cfg) takeCfg(st.cfg); else pushCfg();         // first device seeds the server with its settings
     let first=true;
     const es=new EventSource('api/events');
@@ -811,7 +810,8 @@ function connect(){
 
 apply();
 if(location.protocol!=='file:') connect();
-if(location.hash==='#admin'){ $('#start').classList.add('off'); admin(true); }
+if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
+else $('#adm').remove();                 // game screens carry no admin panel at all
 </script>
 </body>
 </html>

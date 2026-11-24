@@ -37,11 +37,11 @@ http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
 
-  if (req.method === 'GET' && (p === '/' || p === '/index.html')) {
+  // The same page serves both roles: at "/" it is the game only, at "/admin" it is the options panel.
+  if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/admin' || p === '/admin/')) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     return fs.createReadStream(INDEX).pipe(res);
   }
-  if (req.method === 'GET' && p === '/admin') { res.writeHead(302, { Location: '/#admin' }); return res.end(); }
   if (req.method === 'GET' && p === '/healthz') return json(res, 200, { ok: true });
 
   if (req.method === 'GET' && p === '/api/state') return json(res, 200, { rev, cfg });
