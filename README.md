@@ -17,6 +17,8 @@ no server and no external assets.
   1-second press-and-hold; in the game it is a single tap.
 - **Reset** (circular arrow): flip all tiles back, reshuffle a new round, or return to the start screen.
 - **Fullscreen** (corner brackets).
+- **Hide the top buttons**: tap the game title (or the small heading above it) to hide or show
+  the three buttons. The state is remembered on that device.
 
 Add `#admin` to the URL to open straight into the admin panel.
 

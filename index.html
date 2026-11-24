@@ -47,6 +47,8 @@
   .menu .cta.alt{background:#fff;color:#0a1036;box-shadow:inset 0 0 0 2px #0a1036}
   .ibtn .fill{position:absolute;inset:0;background:var(--blue);transform:scaleY(0);transform-origin:bottom}
   .ibtn.holding .fill{transform:scaleY(1);transition:transform .8s linear}
+  .brand small,.brand h1{width:fit-content;max-width:100%}
+  header.nobtn .ibtn{display:none}
   .hide{display:none!important}
 
   /* ---------- board ---------- */
@@ -292,7 +294,7 @@ const DEFAULTS = {
   c1:'#2447f0', c1on:true, c2:'#0a0f2a', c2on:true, c3:'#d9dee8', c3on:true,
   logo:'', logoBacks:false, logoHeader:true,
   flipMs:500, mismatchMs:1100, seenMode:false, seenColor:'#6b7390', autoClose:0,
-  holdLock:false, sound:true, confetti:true, showStats:true, showTray:true, showMock:true,
+  holdLock:false, hideBtns:false, sound:true, confetti:true, showStats:true, showTray:true, showMock:true,
   products:[
     {name:'Galaxy S Ultra',    icon:'phone',   offer:'XX% OFF', note:'Plus trade-in bonus – today only', img:''},
     {name:'Galaxy Z Fold',     icon:'fold',    offer:'XX% OFF', note:'Free storage upgrade', img:''},
@@ -374,6 +376,7 @@ const FORM = [
     {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
     {k:'holdLock',t:'check',l:'Kiosk lock: in-game reset and settings also need a 1-second press-and-hold'},
+    {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the game title shows or hides them)'},
     {k:'sound',t:'check',l:'Sound effects'},
     {k:'confetti',t:'check',l:'Confetti'},
     {k:'showStats',t:'check',l:'Show matches / turns counters'},
@@ -489,6 +492,7 @@ function apply(){
   const P=plan(); $('#stMeta').textContent=`${P.tiles} tiles · ${P.pairs} deals · ${P.sur} surprises`;
   for(const id of ['#hLogo','#sLogo']){ const el=$(id); el.classList.toggle('hide',!(CFG.logo&&CFG.logoHeader)); if(CFG.logo) el.src=CFG.logo; }
   $('#stM').classList.toggle('hide',!CFG.showStats); $('#stT').classList.toggle('hide',!CFG.showStats);
+  document.querySelector('header').classList.toggle('nobtn',!!CFG.hideBtns);
   tray.classList.toggle('hide',!CFG.showTray); $('#mock').classList.toggle('hide',!CFG.showMock);
   document.querySelectorAll('.card.seen').forEach(paintSeen);
   if(!CFG.seenMode) document.querySelectorAll('.card.seen').forEach(el=>{ el.classList.remove('seen'); paintSeen(el); });
@@ -596,6 +600,12 @@ $('#rFlip').onclick    = ()=>{ flipAllBack(); toast('All tiles flipped back'); }
 $('#rShuffle').onclick = ()=>{ closeOvs(); newGame(); toast('New round'); };
 $('#rHome').onclick    = home;
 $('#rCancel').onclick  = rClose;
+/* tap the title (small heading or game title) to hide / show the three top buttons */
+document.querySelector('.brand').addEventListener('click',e=>{
+  if(!e.target.closest('small,h1')) return;
+  CFG.hideBtns=!CFG.hideBtns; save(); apply();
+  const c=$('#aSecs [data-k="hideBtns"]'); if(c) c.checked=CFG.hideBtns;
+});
 press($('#bHome'),resetMenu);
 press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')));
 press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);   // start screen faces the audience: always a hold
