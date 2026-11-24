@@ -149,7 +149,10 @@
   }
   .adm .top,.adm .zin{zoom:var(--az)}
   .adm .top{flex:none;display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0a1036;color:#fff}
-  .adm .top b{flex:1;font-size:17px}
+  .adm .top b{font-size:17px}
+  .adm .top .net{flex:1;font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.14);width:fit-content;flex:0 1 auto;margin-right:auto}
+  .adm .top .net.live{background:#19c37d;color:#04240f}
+  .adm .top .net.down{background:#f2b8b5;color:#601410}
   .adm .top button{min-height:44px;padding:0 16px;border-radius:10px;background:#fff;color:#0a1036;font-weight:700}
   .adm .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
   .adm .zin{padding:12px 14px 40px}
@@ -252,13 +255,14 @@
 
 <!-- ======================= ADMIN ======================= -->
 <aside class="adm" id="adm">
-  <div class="top"><b>Admin</b><span id="saveMsg" style="font-size:12px;opacity:.8"></span><button id="aClose">Done</button></div>
+  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span><button id="aClose">Done</button></div>
   <div class="scroll"><div class="zin">
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
       <button class="btn pri" id="aShuffle">Reshuffle new round</button>
       <button class="btn" id="aPeek">Peek at all tiles (3s)</button>
       <button class="btn" id="aStart">Back to start screen</button>
+      <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
     <div id="aSecs"></div>
     <details><summary>Products &amp; offers</summary><div class="body">
@@ -271,7 +275,7 @@
       <button class="btn" id="aAddSur">+ Add surprise</button>
     </div></details>
     <details><summary>Save, move &amp; reset settings</summary><div class="body">
-      <div class="note">Settings save automatically in this browser. To move them to the touchscreen, export here and import there.</div>
+      <div class="note" id="aSaveNote">Settings save automatically in this browser. To move them to the touchscreen, export here and import there.</div>
       <div class="row"><button class="btn" id="aExport" style="flex:1">Export settings</button><button class="btn" id="aImport" style="flex:1">Import settings</button></div>
       <button class="btn warn" id="aDefaults">Restore all defaults</button>
       <input type="file" id="fImport" accept="application/json,.json" hidden>
@@ -398,8 +402,9 @@ const KEY='flippinDealsCfg.v1';
 let CFG = clone(DEFAULTS);
 try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) CFG=Object.assign(clone(DEFAULTS),s); }catch(e){}
 function save(){
-  try{ localStorage.setItem(KEY,JSON.stringify(CFG)); msg('Saved'); }
-  catch(e){ msg('Not saved on this device – use Export'); }
+  let ok=true; try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){ ok=false; }
+  if(REMOTE){ clearTimeout(pushT); pushT=setTimeout(pushCfg,200); }
+  else msg(ok?'Saved':'Not saved on this device – use Export');
 }
 let msgT; function msg(t){ $('#saveMsg').textContent=t; clearTimeout(msgT); msgT=setTimeout(()=>$('#saveMsg').textContent='',2500); }
 
@@ -640,10 +645,11 @@ function admin(on){
   layout(); setTimeout(layout,50);
 }
 $('#aClose').onclick   = ()=>admin(false);
-$('#aFlipBack').onclick= ()=>{ flipAllBack(); toast('All tiles flipped back'); };
-$('#aShuffle').onclick = ()=>{ closeOvs(); newGame(); toast('New round'); };
-$('#aPeek').onclick    = peek;
-$('#aStart').onclick   = ()=>{ admin(false); home(); };
+$('#aFlipBack').onclick= ()=>send('flipBack');
+$('#aShuffle').onclick = ()=>send('shuffle');
+$('#aPeek').onclick    = ()=>send('peek');
+$('#aStart').onclick   = ()=>{ if(!REMOTE) admin(false); send('home'); };
+$('#aPlay').onclick    = ()=>send('play');
 
 function changed(structural){ save(); apply(); if(structural){ closeOvs(); newGame(); } }
 
@@ -740,7 +746,54 @@ $('#fImport').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) r
   b.onclick=()=>{ if(!armed){ b.textContent='Tap again to confirm'; armed=setTimeout(()=>{armed=0;b.textContent='Restore all defaults'},3000); return; }
     clearTimeout(armed); armed=0; b.textContent='Restore all defaults'; CFG=clone(DEFAULTS); buildAdmin(); changed(true); msg('Defaults restored'); }; }
 
+/* =====================================================================
+   REMOTE CONTROL
+   When the page is served by server.js, settings live on the server and
+   every change or command is pushed to all connected screens. Opened as a
+   plain file, none of this runs and the app works on this device only.
+   ===================================================================== */
+const CID=Math.random().toString(36).slice(2);          // identifies this device so it ignores its own echoes
+let REMOTE=false, pushT=0;
+const STRUCT=['cols','rows','sur','symbol','label','labelFreq','c1','c2','c3','c1on','c2on','c3on','logo','logoBacks','products','surprises'];
+const post=(url,method,body)=>fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>{ if(!r.ok) throw 0; return r.json(); });
+function net(text,cls){ const n=$('#netMsg'); n.textContent=text; n.className='net '+(cls||''); }
+function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
+function takeCfg(cfg){                                  // settings arriving from the server
+  const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
+  const rebuild=STRUCT.some(k=>JSON.stringify(old[k])!==JSON.stringify(CFG[k]));
+  try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
+  const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
+  if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();
+  if(rebuild && S){ closeOvs(); newGame(); }
+}
+const CMDS={
+  flipBack:()=>{ if(S){ flipAllBack(); toast('All tiles flipped back'); } },
+  shuffle :()=>{ closeOvs(); newGame(); toast('New round'); },
+  peek    :()=>{ if(S) peek(); },
+  home    :()=>{ if(!document.body.classList.contains('admin')) home(); },
+  play    :()=>{ if(!$('#start').classList.contains('off')){ $('#start').classList.add('off'); newGame(); } },
+};
+function send(cmd){                                     // run here, and on every other screen when connected
+  if(cmd==='home' && !REMOTE) home(); else CMDS[cmd]();
+  if(REMOTE) post('api/command','POST',{from:CID,cmd}).catch(()=>msg('Could not reach the server'));
+}
+function connect(){
+  fetch('api/state').then(r=>{ if(!r.ok || !/json/.test(r.headers.get('content-type')||'')) throw 0; return r.json(); }).then(st=>{
+    REMOTE=true;
+    $('#aSaveNote').textContent='Settings are stored on the server and shared by every screen. Export / import is for backups.';
+    if(st.cfg) takeCfg(st.cfg); else pushCfg();         // first device seeds the server with its settings
+    let first=true;
+    const es=new EventSource('api/events');
+    es.onopen=()=>{ if(!first) fetch('api/state').then(r=>r.json()).then(s=>{ if(s.cfg) takeCfg(s.cfg); }).catch(()=>{}); first=false; };
+    es.onerror=()=>net('Reconnecting…','down');
+    es.addEventListener('clients',e=>{ const n=JSON.parse(e.data).count; net('Live · '+n+' device'+(n===1?'':'s'),'live'); });
+    es.addEventListener('config',e=>{ const d=JSON.parse(e.data); if(d.from!==CID) takeCfg(d.cfg); });
+    es.addEventListener('command',e=>{ const d=JSON.parse(e.data); if(d.from!==CID && CMDS[d.cmd]) CMDS[d.cmd](); });
+  }).catch(()=>{});                                      // no server: stay in single-device mode
+}
+
 apply();
+if(location.protocol!=='file:') connect();
 if(location.hash==='#admin'){ $('#start').classList.add('off'); admin(true); }
 </script>
 </body>

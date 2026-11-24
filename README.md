@@ -8,8 +8,47 @@ offer. Single "surprise" tiles trigger a challenge, giveaway or reward.
 
 ## Run
 
-Open `index.html` in a browser. It is a single self-contained file: no build step,
-no server and no external assets.
+There are two ways to run it.
+
+**With the control server (remote admin).** Every screen that opens the page shares one set
+of settings, and the admin panel on any device controls all of them live.
+
+```
+docker compose up -d --build
+```
+
+or, without Docker (Node 18 or newer, no dependencies to install):
+
+```
+node server.js
+```
+
+- Game: `http://<host>:8080/`
+- Admin panel: `http://<host>:8080/admin`
+- Settings are stored in `/data/config.json` (a Docker volume), so they survive restarts.
+- `PORT` and `DATA_DIR` environment variables change the port and the storage folder.
+
+The server has **no login**: anyone who can reach the address can open the admin panel and
+change the game. Keep it on a private network, or put it behind something that restricts access.
+
+**As a single file.** Open `index.html` directly in a browser. Everything works, but settings
+stay on that one device.
+
+## Remote control
+
+When served by `server.js`:
+
+- Any settings change made in any admin panel is saved on the server and pushed to every
+  open screen. Changes to the layout, tile backs, products or surprises reshuffle the board
+  on every screen.
+- The admin panel's round buttons act on every screen: flip all tiles back, reshuffle a new
+  round, peek, back to start screen, start the game.
+- The reset menu on a screen itself (circular arrow) only affects that screen.
+- The admin header shows how many devices are connected. Screens reconnect on their own and
+  pick up the current settings if the server restarts.
+
+Endpoints: `GET /api/state`, `PUT /api/config`, `POST /api/command`, `GET /api/events`
+(server-sent events), `GET /healthz`.
 
 ## Controls
 
