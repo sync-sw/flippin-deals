@@ -14,8 +14,9 @@ portrait 9:16 artboard, fitted whole to the screen.
 - **Matching game**: flip two tiles to find pairs; a pair unlocks that product's offer.
   Layout, tiles, products, surprises, scores and names all apply to this game.
 - **Reveal game**: 16 lettered tiles (A–P) in the supplied artwork. Tapping a letter flips
-  it to show what is behind it. Each of the 8 designs sits behind two letters, and which
-  letter hides which design changes on every reshuffle. No scores are recorded.
+  it to show what is behind it. Each of the 8 designs sits behind two letters, in the same
+  order as the supplied open-side artwork. An admin switch shuffles them instead, so the
+  order changes on every reshuffle. No scores are recorded.
 
 The chosen game is a shared setting: with the control server, every screen and the admin
 preview switch together, and the admin page can switch games too.

@@ -376,7 +376,7 @@ const DEFAULTS = {
   kicker:'Samsung Black Friday', title:'Flippin Deals',
   blurb:'Flip two tiles. Match a product to unlock its Black Friday offer. Watch out for surprise cards.',
   hint:'Match two tiles to reveal the first offer',
-  mode:'match', revealPopup:true,
+  mode:'match', revealPopup:true, revealShuffle:false,
   cols:4, rows:5, sur:4, seed:1, boardScale:100, boardY:50,
   uiAuto:true, uiScale:100, admScale:100, tileText:100, aspect:100, gap:10, radius:12, frame:'#c9d0de',
   symbol:'?', label:'Black Friday', labelFreq:20,
@@ -428,6 +428,7 @@ const FORM = [
   ['Game mode', true, [
     {t:'mode'},
     {k:'revealPopup',t:'check',l:'Reveal game: show each revealed tile enlarged'},
+    {k:'revealShuffle',t:'check',l:'Reveal game: shuffle what is behind each letter (off = same order as the artwork)',s:1},
     {t:'modenote'},
   ]],
   ['Layout', true, [
@@ -573,6 +574,7 @@ const REVEAL=[
   {name:'The Frame',type:'prize'},{name:'Challenge',type:'challenge'},{name:'Galaxy Tab S12 Ultra',type:'prize'},{name:'Better luck next time',type:'lose'},
   {name:'Galaxy Z Fold8 Ultra',type:'prize'},{name:'Staycation for two at The Palm',type:'prize'},{name:'Giveaway: AED 500 Samsung Voucher',type:'giveaway'},{name:'Giveaway: Galaxy Buds4',type:'giveaway'},
 ];
+const RVORDER=[0,1,2,3,4,5,6,7,7,4,1,0,3,5,2,6];   // design behind A..P in the open-side artwork
 const RVHEAD={prize:'You revealed',giveaway:'Giveaway!',challenge:'Challenge time',lose:'Not this time'}, LET='ABCDEFGHIJKLMNOP';
 const rv=$('#rv'), rvArt=$('#rvArt');
 const pc=(v,of)=>(v/of*100).toFixed(4)+'%';
@@ -585,11 +587,12 @@ function fitStart(){                      // portrait artboard, fitted whole to 
 }
 function newReveal(){
   const rnd=seeded(CFG.seed||1), ids=REVEAL.map((x,i)=>i);
-  const deck=shuffle(ids.concat(ids),rnd).map(k=>({t:'r',k}));
+  // by default the tiles are exactly as in the supplied open-side artwork; shuffling is an admin option
+  const deck=(CFG.revealShuffle ? shuffle(ids.concat(ids),rnd) : RVORDER).map(k=>({t:'r',k}));
   S={mode:'reveal',deck,lock:false,opened:0,first:null,pairs:0,turns:0,matches:0,won:[],deal:-1};
   rvArt.innerHTML=LOGO+deck.map((c,i)=>`<button class="card" data-i="${i}" aria-label="Tile ${LET[i]}" style="left:${pc(ART.xs[i%4],ART.W)};top:${pc(ART.ys[i/4|0],ART.H)};width:${pc(ART.size,ART.W)};height:${pc(ART.size,ART.H)}">`
     +`<div class="inner"><div class="face rback" style="background-image:url('${ART.closed[i]}')"></div><div class="face rfront" style="background-image:url('${ART.open[c.k]}')"></div></div></button>`).join('');
-  layout(); log('deal','reveal game · 16 tiles · seed '+CFG.seed);
+  layout(); log('deal','reveal game · 16 tiles · '+(CFG.revealShuffle?'shuffled, seed '+CFG.seed:'artwork order'));
 }
 function fitReveal(){                     // the artwork is 9:16; fit it whole inside the available area
   const k=Math.min(rv.clientWidth/ART.W, rv.clientHeight/ART.H); if(!k) return;
@@ -1024,7 +1027,7 @@ function net(text,cls){ const n=$('#netMsg'); if(!n) return; n.textContent=text;
 function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
 function takeCfg(cfg){                                  // settings arriving from the server
   const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
-  const rebuild=['mode','seed','cols','rows','sur'].some(k=>old[k]!==CFG[k]) || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
+  const rebuild=['mode','revealShuffle','seed','cols','rows','sur'].some(k=>old[k]!==CFG[k]) || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
   try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
   const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();
