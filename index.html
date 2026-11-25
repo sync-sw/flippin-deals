@@ -152,7 +152,7 @@
   .play{min-height:clamp(68px,10vmin,110px);padding:0 clamp(36px,7vmin,90px);border-radius:99px;background:var(--blue);
     font-size:clamp(22px,4vmin,44px);font-weight:900;box-shadow:0 0 0 0 rgba(79,116,255,.7);animation:pulse 1.8s infinite}
   @keyframes pulse{70%{box-shadow:0 0 0 28px rgba(79,116,255,0)}100%{box-shadow:0 0 0 0 rgba(79,116,255,0)}}
-  .start .ibtn{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top))}
+  .start .tools{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top));display:flex;gap:var(--pad)}
   canvas#fx{position:fixed;inset:0;z-index:15;pointer-events:none}
 
   /* ---------- admin drawer ---------- */
@@ -223,6 +223,7 @@
     <div class="stat" id="stT"><b id="sTurn">0</b><span>Turns</span></div>
     <button class="ibtn" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="bHome" aria-label="Reset"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg></button>
+    <button class="ibtn" id="bAdm" aria-label="Hold for settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   </header>
   <div class="stage" id="stage"><div class="hint" id="hint"></div><div class="board" id="board"></div></div>
   <div class="tray" id="tray"></div>
@@ -275,7 +276,10 @@
 <div class="toast" id="toast"></div>
 
 <div class="start" id="start">
-  <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <div class="tools">
+    <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ibtn" id="bAdm2" aria-label="Hold for settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
+  </div>
   <img class="slogo hide" id="sLogo" alt="">
   <small id="stKicker"></small>
   <h1 id="stTitle"></h1>
@@ -286,15 +290,13 @@
 
 <!-- ======================= ADMIN ======================= -->
 <aside class="adm" id="adm">
-  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span></div>
+  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span><button id="aClose">Done</button></div>
   <div class="scroll"><div class="zin">
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
       <button class="btn pri" id="aShuffle">Reshuffle new round</button>
-      <button class="btn" id="aPeekHere">Peek: admin only (3s)</button>
-      <button class="btn" id="aPeek">Peek: all screens (3s)</button>
+      <button class="btn" id="aPeek">Peek at all tiles (3s)</button>
       <button class="btn" id="aStart">Back to start screen</button>
-      <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
     <div id="aSecs"></div>
     <details><summary>Products &amp; offers</summary><div class="body">
@@ -318,7 +320,7 @@
       <div class="row"><button class="btn" id="aLogDl" style="flex:1">Download log</button><button class="btn warn" id="aLogClear" style="flex:1">Clear log</button></div>
     </div></details>
     <details><summary>Save, move &amp; reset settings</summary><div class="body">
-      <div class="note" id="aSaveNote">Settings save automatically in this browser. To move them to the touchscreen, export here and import there.</div>
+      <div class="note" id="aSaveNote">Settings save automatically in this browser, on this device only. To move them to another screen, export here and import there.</div>
       <div class="row"><button class="btn" id="aExport" style="flex:1">Export settings</button><button class="btn" id="aImport" style="flex:1">Import settings</button></div>
       <button class="btn warn" id="aDefaults">Restore all defaults</button>
       <input type="file" id="fImport" accept="application/json,.json" hidden>
@@ -424,14 +426,14 @@ const FORM = [
     {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
     {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
     {k:'askName',t:'check',l:'Ask players for their name after clearing the board (they can skip)'},
-    {k:'holdLock',t:'check',l:'Kiosk lock: the reset button on game screens needs a 1-second press-and-hold'},
+    {k:'holdLock',t:'check',l:'Kiosk lock: the reset button also needs a 1-second press-and-hold'},
     {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the game title shows or hides them)'},
     {k:'confetti',t:'check',l:'Confetti'},
     {k:'showStats',t:'check',l:'Show matches / turns counters'},
     {k:'showTray',t:'check',l:'Show unlocked-offers strip'},
   ]],
   ['Audio', false, [
-    {k:'sound',t:'check',l:'Sound effects on game screens'},
+    {k:'sound',t:'check',l:'Sound effects'},
     {k:'volume',t:'range',min:0,max:100,step:5,u:'%',l:'Volume'},
     {t:'testsound'},
   ]],
@@ -757,6 +759,9 @@ document.querySelector('.brand').addEventListener('click',e=>{
   const c=$('#aSecs [data-k="hideBtns"]'); if(c) c.checked=CFG.hideBtns;
 });
 press($('#bHome'),resetMenu);
+// settings: always a 1-second press-and-hold, in the game header and on the start screen
+press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')),true);
+press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);
 document.addEventListener('contextmenu',e=>{ if(!e.target.closest('.adm')) e.preventDefault(); });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
@@ -784,9 +789,9 @@ function step(){
    ===================================================================== */
 /* The options live only on the admin page: /admin when served by server.js, or index.html#admin
    when the file is opened directly. The game page has no way into them. */
-const ADMIN = /\/admin\/?$/.test(location.pathname) || (location.protocol==='file:' && location.hash==='#admin');
+const ADMIN = false;      // standalone fork: there is no separate admin page and no server
+const PANEL = true;       // the options panel lives in the game page, behind the settings button
 function admin(on){
-  if(!ADMIN) return;
   document.body.classList.toggle('admin',on);
   if(on){ if(!S) newGame(); buildAdmin(); }
   layout(); setTimeout(layout,50);
@@ -794,9 +799,8 @@ function admin(on){
 $('#aFlipBack').onclick= ()=>send('flipBack');
 $('#aShuffle').onclick = reseed;
 $('#aPeek').onclick    = ()=>send('peek');
-$('#aPeekHere').onclick= ()=>peek();        // same 3-second peek, on this admin page only
-$('#aStart').onclick   = ()=>send('home');
-$('#aPlay').onclick    = ()=>send('play');
+$('#aStart').onclick   = ()=>{ admin(false); home(); };
+$('#aClose').onclick   = ()=>admin(false);
 
 function changed(deal){ if(deal) CFG.seed=newSeed(); save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
 
@@ -815,7 +819,7 @@ function field(f){
     case 'presets': return `<div class="presets">${PRESETS.map((p,i)=>`<button class="btn" data-preset="${i}">${p[0]}</button>`).join('')}</div>`;
     case 'layoutnote': return `<div class="note" id="aLayoutNote"></div>`;
     case 'screennote': return `<div class="note" id="aScreenNote"></div>`;
-    case 'testsound': return `<button class="btn" data-testsound>Play a test sound on this device</button><div class="note">Each screen plays through its own speakers, and only after it has been touched once (browsers block audio until then). The admin page itself stays silent.</div>`;
+    case 'testsound': return `<button class="btn" data-testsound>Play a test sound on this device</button><div class="note">Browsers block audio until the screen has been touched once.</div>`;
     case 'logo': return `<div class="row"><img class="logoprev ${CFG.logo?'':'hide'}" id="aLogoPrev" src="${CFG.logo||''}" alt=""><button class="btn" data-up="logo" style="flex:1">${CFG.logo?'Replace logo':'Upload logo'}</button>${CFG.logo?'<button class="btn warn" data-rmlogo>Remove</button>':''}</div>`;
   }
   return '';
@@ -942,20 +946,20 @@ function connect(){
     es.addEventListener('command',e=>{ const d=JSON.parse(e.data); if(d.from!==CID && CMDS[d.cmd]){ log('command-received',d.cmd); CMDS[d.cmd](); } });
   }).catch(()=>local());                                 // no server: stay in single-device mode
 }
-function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); if(ADMIN){ LOGS=[]; gotLogs(lsGet(KEY_LOG)); renderScores(); } flushLog(); }
+function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); LOGS=[]; gotLogs(lsGet(KEY_LOG)); renderScores(); flushLog(); }
 
 /* ---------- scores and log: storage + admin views ---------- */
 function postScore(sc){
   if(NETMODE==='remote') fetch('api/score',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(sc)}).catch(()=>{});
-  else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); }
+  else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); gotScores(lsGet(KEY_SC)); }
 }
 function gotScores(list){ SCORES=list; renderScores(); }
-function gotLogs(entries){ if(!ADMIN) return; LOGS=LOGS.concat(entries).slice(-2000); renderLog(entries); }
+function gotLogs(entries){ if(!PANEL) return; LOGS=LOGS.concat(entries).slice(-2000); renderLog(entries); }
 const better=(a,b)=>a.turns-b.turns || a.secs-b.secs;      // fewer turns wins, then the faster time
 const mmss=s=>Math.floor(s/60)+':'+('0'+s%60).slice(-2);
 const when=ts=>{ const d=new Date(ts); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); };
 function renderScores(){
-  if(!ADMIN || !$('#aBest')) return;
+  if(!PANEL || !$('#aBest')) return;
   const P=plan(), same=SCORES.filter(x=>x.cols===CFG.cols&&x.rows===CFG.rows&&x.pairs===P.pairs).sort(better)[0];
   $('#aBest').innerHTML = same ? `<b>${same.name?esc(same.name)+' · ':''}${same.turns} turns · ${mmss(same.secs)}</b><span>Best for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs) · ${when(same.ts)} · screen ${esc(same.dev)}</span>`
                                : `<b>No score yet</b><span>for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs). A score is recorded each time a game screen clears the board.</span>`;
@@ -971,15 +975,15 @@ function logLine(e){
   return t+'  '+(e.role+'·'+e.dev+'          ').slice(0,11)+' '+(e.ev+'                  ').slice(0,18)+' '+e.d;
 }
 function renderLog(added){
-  const box=$('#aLog'); if(!ADMIN || !box) return;
+  const box=$('#aLog'); if(!PANEL || !box) return;
   const only=$('#aLogErr').checked, keep=e=>!only||NOISY.test(e.ev), atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
   const html=list=>list.filter(keep).map(e=>`<div class="${e.ev==='error'?'er':e.role==='server'?'sv':e.role==='admin'?'ad':''}">${esc(logLine(e))}</div>`).join('');
   if(added && box.childElementCount) box.insertAdjacentHTML('beforeend',html(added)); else box.innerHTML=html(LOGS);
   while(box.childElementCount>2000) box.firstElementChild.remove();
   if(atEnd) box.scrollTop=box.scrollHeight;
-  $('#aLogNote').textContent=LOGS.length+' events from every connected screen, newest at the bottom. Devices are tagged role·id (grey = admin pages, blue = server).';
+  $('#aLogNote').textContent=LOGS.length+' events from this device, newest at the bottom (the last 300 are kept).';
 }
-if(typeof ADMIN!=='undefined' && ADMIN){
+if(PANEL){
   $('#aLogErr').onchange=()=>renderLog();
   $('#aLogDl').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([LOGS.map(logLine).join('\n')],{type:'text/plain'})); a.download='flippin-deals-log.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   $('#aLogClear').onclick=()=>{ if(NETMODE==='remote') fetch('api/log',{method:'DELETE'}).catch(()=>{}); else{ lsSet(KEY_LOG,[]); LOGS=[]; renderLog(); } };
@@ -992,9 +996,8 @@ if(typeof ADMIN!=='undefined' && ADMIN){
 
 apply();
 log('page-loaded',innerWidth+'×'+innerHeight+' · '+(/Chrom(?:e|ium)\/(\d+)/.exec(navigator.userAgent)||['browser'])[0]);
-if(location.protocol!=='file:') connect(); else local();
-if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
-else $('#adm').remove();                 // game screens carry no admin panel at all
+local();                                  // no server in this fork: everything stays on this device
+if(location.hash==='#admin'){ $('#start').classList.add('off'); admin(true); }
 </script>
 </body>
 </html>
