@@ -31,8 +31,14 @@ node server.js
 The server has **no login**: anyone who can reach the address can open the admin panel and
 change the game. Keep it on a private network, or put it behind something that restricts access.
 
-**As a single file.** Open `index.html` directly in a browser to play. With no server, the
-options are at `index.html#admin` and stay on that one device.
+**Standalone (static hosting such as Vercel, or the file opened directly).** There is no
+server, so the options panel is inside the game page: press and hold the settings button
+(sliders icon, top right of the start screen and of the game header) for 1 second. "Done"
+closes it. Settings, high scores and the event log stay in that device's browser, and there
+is no remote control. Deploying is just serving `index.html`; `server.js` is not used.
+
+The page decides which way to run by itself: `server.js` marks the pages it serves, and a
+page without that mark runs standalone.
 
 ## Remote control
 
@@ -87,7 +93,8 @@ Endpoints: `GET /api/state`, `PUT /api/config`, `POST /api/command`, `GET /api/e
 - **Hide the top buttons**: tap the game title (or the small heading above it) to hide or show
   the three buttons. The state is remembered on that device.
 
-The game page has no settings button. All options are on the admin page.
+With the control server, the game page has no settings button and all options are on the
+admin page. Standalone, the settings button (1-second hold) opens them in the game page.
 
 ## Admin panel
 

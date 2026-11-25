@@ -64,8 +64,13 @@ http.createServer((req, res) => {
 
   // The same page serves both roles: at "/" it is the game only, at "/admin" it is the options panel.
   if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/admin' || p === '/admin/')) {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-    return fs.createReadStream(INDEX).pipe(res);
+    // The page checks window.FD_SERVER to know a control server is present. Without it (static
+    // hosting, or the file opened directly) it runs standalone with its own in-page options panel.
+    return fs.readFile(INDEX, 'utf8', (e, html) => {
+      if (e) return json(res, 500, { error: 'index.html missing' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
+      res.end(html.replace('<head>', '<head>\n<script>window.FD_SERVER=true</script>'));
+    });
   }
   if (req.method === 'GET' && p === '/healthz') return json(res, 200, { ok: true });
 

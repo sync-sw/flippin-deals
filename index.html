@@ -152,7 +152,7 @@
   .play{min-height:clamp(68px,10vmin,110px);padding:0 clamp(36px,7vmin,90px);border-radius:99px;background:var(--blue);
     font-size:clamp(22px,4vmin,44px);font-weight:900;box-shadow:0 0 0 0 rgba(79,116,255,.7);animation:pulse 1.8s infinite}
   @keyframes pulse{70%{box-shadow:0 0 0 28px rgba(79,116,255,0)}100%{box-shadow:0 0 0 0 rgba(79,116,255,0)}}
-  .start .ibtn{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top))}
+  .start .tools{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top));display:flex;gap:var(--pad)}
   canvas#fx{position:fixed;inset:0;z-index:15;pointer-events:none}
 
   /* ---------- admin drawer ---------- */
@@ -223,6 +223,7 @@
     <div class="stat" id="stT"><b id="sTurn">0</b><span>Turns</span></div>
     <button class="ibtn" id="bFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="bHome" aria-label="Reset"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg></button>
+    <button class="ibtn" id="bAdm" aria-label="Hold for settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   </header>
   <div class="stage" id="stage"><div class="hint" id="hint"></div><div class="board" id="board"></div></div>
   <div class="tray" id="tray"></div>
@@ -275,7 +276,10 @@
 <div class="toast" id="toast"></div>
 
 <div class="start" id="start">
-  <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <div class="tools">
+    <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="ibtn" id="bAdm2" aria-label="Hold for settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
+  </div>
   <img class="slogo hide" id="sLogo" alt="">
   <small id="stKicker"></small>
   <h1 id="stTitle"></h1>
@@ -286,7 +290,7 @@
 
 <!-- ======================= ADMIN ======================= -->
 <aside class="adm" id="adm">
-  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span></div>
+  <div class="top"><b>Admin</b><span id="netMsg" class="net">This device only</span><span id="saveMsg" style="font-size:12px;opacity:.8"></span><button id="aClose">Done</button></div>
   <div class="scroll"><div class="zin">
     <div class="quick">
       <button class="btn pri" id="aFlipBack">Flip all tiles back</button>
@@ -757,6 +761,9 @@ document.querySelector('.brand').addEventListener('click',e=>{
   const c=$('#aSecs [data-k="hideBtns"]'); if(c) c.checked=CFG.hideBtns;
 });
 press($('#bHome'),resetMenu);
+// standalone only: settings always need a 1-second press-and-hold (both buttons are removed when a server is present)
+press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')),true);
+press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);
 document.addEventListener('contextmenu',e=>{ if(!e.target.closest('.adm')) e.preventDefault(); });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
@@ -782,11 +789,17 @@ function step(){
 /* =====================================================================
    ADMIN PANEL
    ===================================================================== */
-/* The options live only on the admin page: /admin when served by server.js, or index.html#admin
-   when the file is opened directly. The game page has no way into them. */
-const ADMIN = /\/admin\/?$/.test(location.pathname) || (location.protocol==='file:' && location.hash==='#admin');
+/* Two ways of running, decided by whether server.js served this page (it sets window.FD_SERVER):
+   - With the server (Docker): the game page has no options; they live on the /admin page,
+     which controls every screen.
+   - Standalone (static hosting such as Vercel, or the file opened directly): no server, so the
+     options panel is inside the game page, behind a settings button that needs a 1-second hold. */
+const SERVER = !!window.FD_SERVER;
+const ADMIN = SERVER && /\/admin\/?$/.test(location.pathname);   // this page is the remote admin page
+const STANDALONE = !SERVER;
+const PANEL = ADMIN || STANDALONE;                                 // this page has an options panel
 function admin(on){
-  if(!ADMIN) return;
+  if(!PANEL) return;
   document.body.classList.toggle('admin',on);
   if(on){ if(!S) newGame(); buildAdmin(); }
   layout(); setTimeout(layout,50);
@@ -795,7 +808,8 @@ $('#aFlipBack').onclick= ()=>send('flipBack');
 $('#aShuffle').onclick = reseed;
 $('#aPeek').onclick    = ()=>send('peek');
 $('#aPeekHere').onclick= ()=>peek();        // same 3-second peek, on this admin page only
-$('#aStart').onclick   = ()=>send('home');
+$('#aStart').onclick   = ()=>{ if(STANDALONE){ admin(false); home(); } else send('home'); };
+$('#aClose').onclick   = ()=>admin(false);
 $('#aPlay').onclick    = ()=>send('play');
 
 function changed(deal){ if(deal) CFG.seed=newSeed(); save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
@@ -942,20 +956,20 @@ function connect(){
     es.addEventListener('command',e=>{ const d=JSON.parse(e.data); if(d.from!==CID && CMDS[d.cmd]){ log('command-received',d.cmd); CMDS[d.cmd](); } });
   }).catch(()=>local());                                 // no server: stay in single-device mode
 }
-function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); if(ADMIN){ LOGS=[]; gotLogs(lsGet(KEY_LOG)); renderScores(); } flushLog(); }
+function local(){ NETMODE='local'; SCORES=lsGet(KEY_SC); if(PANEL){ LOGS=[]; gotLogs(lsGet(KEY_LOG)); renderScores(); } flushLog(); }
 
 /* ---------- scores and log: storage + admin views ---------- */
 function postScore(sc){
   if(NETMODE==='remote') fetch('api/score',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(sc)}).catch(()=>{});
-  else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); }
+  else{ sc.ts=Date.now(); lsSet(KEY_SC,lsGet(KEY_SC).concat([sc]).slice(-500)); gotScores(lsGet(KEY_SC)); }
 }
 function gotScores(list){ SCORES=list; renderScores(); }
-function gotLogs(entries){ if(!ADMIN) return; LOGS=LOGS.concat(entries).slice(-2000); renderLog(entries); }
+function gotLogs(entries){ if(!PANEL) return; LOGS=LOGS.concat(entries).slice(-2000); renderLog(entries); }
 const better=(a,b)=>a.turns-b.turns || a.secs-b.secs;      // fewer turns wins, then the faster time
 const mmss=s=>Math.floor(s/60)+':'+('0'+s%60).slice(-2);
 const when=ts=>{ const d=new Date(ts); return d.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); };
 function renderScores(){
-  if(!ADMIN || !$('#aBest')) return;
+  if(!PANEL || !$('#aBest')) return;
   const P=plan(), same=SCORES.filter(x=>x.cols===CFG.cols&&x.rows===CFG.rows&&x.pairs===P.pairs).sort(better)[0];
   $('#aBest').innerHTML = same ? `<b>${same.name?esc(same.name)+' · ':''}${same.turns} turns · ${mmss(same.secs)}</b><span>Best for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs) · ${when(same.ts)} · screen ${esc(same.dev)}</span>`
                                : `<b>No score yet</b><span>for the current ${CFG.cols} × ${CFG.rows} layout (${P.pairs} pairs). A score is recorded each time a game screen clears the board.</span>`;
@@ -971,15 +985,15 @@ function logLine(e){
   return t+'  '+(e.role+'·'+e.dev+'          ').slice(0,11)+' '+(e.ev+'                  ').slice(0,18)+' '+e.d;
 }
 function renderLog(added){
-  const box=$('#aLog'); if(!ADMIN || !box) return;
+  const box=$('#aLog'); if(!PANEL || !box) return;
   const only=$('#aLogErr').checked, keep=e=>!only||NOISY.test(e.ev), atEnd=box.scrollTop+box.clientHeight>=box.scrollHeight-30;
   const html=list=>list.filter(keep).map(e=>`<div class="${e.ev==='error'?'er':e.role==='server'?'sv':e.role==='admin'?'ad':''}">${esc(logLine(e))}</div>`).join('');
   if(added && box.childElementCount) box.insertAdjacentHTML('beforeend',html(added)); else box.innerHTML=html(LOGS);
   while(box.childElementCount>2000) box.firstElementChild.remove();
   if(atEnd) box.scrollTop=box.scrollHeight;
-  $('#aLogNote').textContent=LOGS.length+' events from every connected screen, newest at the bottom. Devices are tagged role·id (grey = admin pages, blue = server).';
+  $('#aLogNote').textContent=LOGS.length+(STANDALONE?' events from this device, newest at the bottom (the last 300 are kept).':' events from every connected screen, newest at the bottom. Devices are tagged role·id (grey = admin pages, blue = server).');
 }
-if(typeof ADMIN!=='undefined' && ADMIN){
+if(PANEL){
   $('#aLogErr').onchange=()=>renderLog();
   $('#aLogDl').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([LOGS.map(logLine).join('\n')],{type:'text/plain'})); a.download='flippin-deals-log.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   $('#aLogClear').onclick=()=>{ if(NETMODE==='remote') fetch('api/log',{method:'DELETE'}).catch(()=>{}); else{ lsSet(KEY_LOG,[]); LOGS=[]; renderLog(); } };
@@ -992,9 +1006,17 @@ if(typeof ADMIN!=='undefined' && ADMIN){
 
 apply();
 log('page-loaded',innerWidth+'×'+innerHeight+' · '+(/Chrom(?:e|ium)\/(\d+)/.exec(navigator.userAgent)||['browser'])[0]);
-if(location.protocol!=='file:') connect(); else local();
-if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
-else $('#adm').remove();                 // game screens carry no admin panel at all
+if(SERVER) connect(); else local();
+if(SERVER){                                // options are on /admin only: strip the in-page entry points
+  ['#bAdm','#bAdm2','#aClose'].forEach(q=>$(q).remove());
+  if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
+  else $('#adm').remove();
+}else{                                     // standalone: one device, so drop the multi-screen controls
+  ['#aPeekHere','#aPlay'].forEach(q=>$(q).remove());
+  $('#aPeek').textContent='Peek at all tiles (3s)';
+  $('#aSaveNote').textContent='Settings save automatically in this browser, on this device only. To move them to another screen, export here and import there.';
+  if(location.hash==='#admin'){ $('#start').classList.add('off'); admin(true); }
+}
 </script>
 </body>
 </html>
