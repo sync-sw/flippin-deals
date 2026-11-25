@@ -6,6 +6,22 @@ Touchscreen memory-tile game for the Black Friday live commerce activation
 Players flip two tiles; a matching pair of products unlocks that product's Black Friday
 offer. Single "surprise" tiles trigger a challenge, giveaway or reward.
 
+## Two games
+
+"Tap to play" on the start screen leads to a choice of game. The start screen is always a
+portrait 9:16 artboard, fitted whole to the screen.
+
+- **Matching game**: flip two tiles to find pairs; a pair unlocks that product's offer.
+  Layout, tiles, products, surprises, scores and names all apply to this game.
+- **Reveal game**: 16 lettered tiles (A–P) in the supplied artwork. Tapping a letter flips
+  it to show what is behind it. Each of the 8 designs sits behind two letters, and which
+  letter hides which design changes on every reshuffle. No scores are recorded.
+
+The chosen game is a shared setting: with the control server, every screen and the admin
+preview switch together, and the admin page can switch games too.
+
+The artwork (background, logo, letter tiles, prize tiles) is embedded in `index.html`.
+
 ## Run
 
 There are two ways to run it.
