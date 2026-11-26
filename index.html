@@ -438,7 +438,7 @@ const FORM = [
     {t:'mode'},
     {g:2,k:'rvMatchPopup',t:'check',l:'Show a pop-up when a pair is matched'},
     {g:2,k:'rvLosePopup',t:'check',l:'Show a pop-up straight away on a “Better luck next time” tile'},
-    {g:2,k:'rvChallengePopup',t:'check',l:'Show a pop-up straight away on a “Challenge” tile'},
+    {g:2,k:'rvChallengePopup',t:'check',l:'Show a pop-up when the “Challenge” pair is matched'},
     {g:2,k:'revealShuffle',t:'check',l:'Shuffle what is behind each letter (off = same order as the artwork)',s:1},
     {g:2,k:'rvMatch',t:'check',l:'Tiles must be matched in pairs (off = every tile simply reveals when tapped)',s:1},
     {t:'modenote'},
@@ -639,11 +639,11 @@ function newReveal(){
 }
 function rvKeys(){                        // which tiles pair with which
   // Tiles from the artwork pair by design. Admin-added tiles pair when two of them carry the same picture (or the
-  // same name with no picture). "Better luck" and "Challenge" tiles, and any tile with no partner, are singles:
-  // they are never a pair and act the moment they are flipped.
+  // same name with no picture). "Better luck" tiles, and any tile with no partner, are singles: they are never
+  // a pair and act the moment they are flipped. "Challenge" tiles are an ordinary pair with their own pop-up switch.
   const n={}, X=rvExtra();
-  S.deck.forEach(c=>{ const x=X[c.e]||{}; c.key = c.e===undefined ? 'k'+c.k : 'x'+(x.img || 'n:'+(x.name||'#'+c.e)); const ty=rvItem(c).type; c.lose = ty==='lose'; c.chal = ty==='challenge'; if(!c.lose && !c.chal) n[c.key]=(n[c.key]||0)+1; });
-  S.deck.forEach(c=>{ c.solo = c.lose || c.chal || n[c.key]<2; });
+  S.deck.forEach(c=>{ const x=X[c.e]||{}; c.key = c.e===undefined ? 'k'+c.k : 'x'+(x.img || 'n:'+(x.name||'#'+c.e)); const ty=rvItem(c).type; c.lose = ty==='lose'; c.chal = ty==='challenge'; if(!c.lose) n[c.key]=(n[c.key]||0)+1; });
+  S.deck.forEach(c=>{ c.solo = c.lose || n[c.key]<2; });
   S.pairs = Object.keys(n).reduce((t,k)=>t+Math.floor(n[k]/2),0);
 }
 function repaintReveal(){                 // refresh the insides in place (new picture or name) without closing any tile
@@ -657,8 +657,8 @@ function fitReveal(){                     // the artwork is 9:16; fit it whole i
   const g=rvGrid(S&&S.mode==='reveal'?S.deck.length:RVBASE); rvArt.style.setProperty('--cs',(g[0].s*k)+'px');
 }
 /* Matching Game #2 – same rules as game #1, played on the artwork tiles:
-   flip two letters; a matching pair stays open, a wrong pair flips back. A "Better luck next time" or "Challenge"
-   tile (or any tile without a partner) acts the moment it is flipped and stays open; as a second pick it ends the turn.
+   flip two letters; a matching pair stays open, a wrong pair flips back. A "Better luck next time" tile (or any
+   tile without a partner) acts the moment it is flipped and stays open; as a second pick it ends the turn.
    With "matched in pairs" switched off in the admin panel, every tile simply reveals when tapped. */
 rvArt.addEventListener('click',e=>{
   const el=e.target.closest('.card'); if(!el || !S || S.mode!=='reveal') return;

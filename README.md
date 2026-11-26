@@ -16,10 +16,10 @@ portrait 9:16 artboard, fitted whole to the screen.
 - **Matching Game #2**: the same matching rules on the supplied artwork, 20 lettered tiles
   (A–T, five rows) hiding 10 designs, two of each.
   - Flip two letters. A matching pair stays open with a green tick; a wrong pair flips back.
-  - The "Better luck next time" and "Challenge" tiles (two of each) are never a pair: each
-    one shows its pop-up the moment it is flipped and stays open. Picked second, it ends the turn and the first
+  - The two "Better luck next time" tiles are never a pair: each one shows its pop-up the
+    moment it is flipped and stays open. The two "Challenge" tiles are an ordinary pair. Picked second, it ends the turn and the first
     tile flips back.
-  - Admin options: pop-up on a match (on/off), pop-up on a "Better luck" tile (on/off), pop-up on a "Challenge" tile (on/off),
+  - Admin options: pop-up on a match (on/off), pop-up on a "Better luck" tile (on/off), pop-up when the "Challenge" pair is matched (on/off),
     shuffle the designs (off = the artwork's order), and "tiles must be matched in pairs"
     (off = every tile simply reveals when tapped, the earlier Reveal game).
   - A finished tile can be tapped again to bring its pop-up back, if that pop-up is on.
