@@ -85,6 +85,7 @@
   body.reveal .brand{opacity:0}                 /* the logo is in the artwork; the title tap still works */
   .rvart{position:relative;flex:none}
   .artlogo{position:absolute;pointer-events:none;-webkit-user-drag:none}
+  .rvart .card.done::after{right:-5%;top:-5%}
   .rvart .card{position:absolute;border-radius:var(--tr,4%)}
   .rvart .face{border-radius:var(--tr,4%);overflow:hidden;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.28)}
   .rvart .face svg,.rvbig svg,.rvart .face img,.rvbig img{display:block;width:100%;height:100%}
@@ -321,8 +322,8 @@
   <div class="meta" id="stMeta"></div>
   <button class="play" id="bPlay">Tap to play</button>
   <div class="modes hide" id="modes">
-    <button class="mode" data-mode="match"><b>Matching game</b><span>Flip two tiles and find the pairs</span></button>
-    <button class="mode" data-mode="reveal"><b>Reveal game</b><span>Pick a letter and see what is behind it</span></button>
+    <button class="mode" data-mode="match"><b>Matching Game #1</b><span>Flip two tiles and find the product pairs</span></button>
+    <button class="mode" data-mode="reveal"><b>Matching Game #2</b><span>Flip two letters and find the matching pair</span></button>
   </div>
   </div></div>
 </div>
@@ -340,7 +341,7 @@
       <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
     <div id="aSecs"></div>
-    <details><summary>Reveal game: extra tiles</summary><div class="body">
+    <details><summary>Matching Game #2: extra tiles</summary><div class="body">
       <div class="note" id="aRvNote"></div>
       <div id="aRvX" style="display:grid;gap:8px"></div>
       <div class="row"><button class="btn pri" id="aRvAdd" style="flex:1">+ Add a row (4 tiles)</button><button class="btn warn" id="aRvDel" style="flex:1">Remove last row</button></div>
@@ -384,7 +385,7 @@ const DEFAULTS = {
   kicker:'Samsung Black Friday', title:'Flippin Deals',
   blurb:'Flip two tiles. Match a product to unlock its Black Friday offer. Watch out for surprise cards.',
   hint:'Match two tiles to reveal the first offer',
-  mode:'match', revealPopup:true, revealShuffle:false, revealExtra:[],
+  mode:'match', rvMatch:true, rvMatchPopup:true, rvLosePopup:true, revealShuffle:false, revealExtra:[],
   cols:4, rows:5, sur:4, seed:1, boardScale:100, boardY:50,
   uiAuto:true, uiScale:100, admScale:100, tileText:100, aspect:100, gap:10, radius:12, frame:'#c9d0de',
   symbol:'?', label:'Black Friday', labelFreq:20,
@@ -435,8 +436,10 @@ const ICONS = {
 const FORM = [
   ['Game mode', true, [
     {t:'mode'},
-    {k:'revealPopup',t:'check',l:'Reveal game: show each revealed tile enlarged'},
-    {k:'revealShuffle',t:'check',l:'Reveal game: shuffle what is behind each letter (off = same order as the artwork)',s:1},
+    {k:'rvMatchPopup',t:'check',l:'Game #2: show a pop-up when a pair is matched'},
+    {k:'rvLosePopup',t:'check',l:'Game #2: show a pop-up on a “Better luck next time” tile'},
+    {k:'revealShuffle',t:'check',l:'Game #2: shuffle what is behind each letter (off = same order as the artwork)',s:1},
+    {k:'rvMatch',t:'check',l:'Game #2: tiles must be matched in pairs (off = every tile simply reveals when tapped)',s:1},
     {t:'modenote'},
   ]],
   ['Layout', true, [
@@ -627,36 +630,76 @@ function newReveal(){
   // insides in artwork order, then the extra tiles in the order they were added; shuffling is an admin option
   let ins=RVORDER.map(k=>({t:'r',k})).concat(rvExtra().map((x,e)=>({t:'r',e})));
   if(CFG.revealShuffle) ins=shuffle(ins,rnd);
-  S={mode:'reveal',deck:ins,lock:false,opened:0,first:null,pairs:0,turns:0,matches:0,won:[],deal:-1};
+  S={mode:'reveal',deck:ins,lock:false,opened:0,first:null,pairs:0,turns:0,matches:0,won:[],deal:-1,fin:false};
   const g=rvGrid(ins.length);
   rvArt.innerHTML=LOGO+ins.map((c,i)=>`<button class="card" data-i="${i}" aria-label="Tile ${tileLetter(i)}" style="left:${pc(g[i].x,ART.W)};top:${pc(g[i].y,ART.H)};width:${pc(g[i].s,ART.W)};height:${pc(g[i].s,ART.H)}">`
     +`<div class="inner"><div class="face rback">${rvBack(i)}</div><div class="face rfront"></div></div></button>`).join('');
-  repaintReveal(); layout(); log('deal','reveal game · '+ins.length+' tiles · '+(CFG.revealShuffle?'shuffled, seed '+CFG.seed:'artwork order'));
+  repaintReveal(); layout(); log('deal','matching game #2 · '+ins.length+' tiles · '+(CFG.rvMatch?S.pairs+' pairs · ':'reveal only · ')+(CFG.revealShuffle?'shuffled, seed '+CFG.seed:'artwork order'));
+}
+function rvKeys(){                        // which tiles pair with which
+  // Tiles from the artwork pair by design. Admin-added tiles pair when two of them carry the same picture (or the
+  // same name with no picture). "Better luck" tiles, and any tile with no partner, are singles: they act at once.
+  const n={}, X=rvExtra();
+  S.deck.forEach(c=>{ const x=X[c.e]||{}; c.key = c.e===undefined ? 'k'+c.k : 'x'+(x.img || 'n:'+(x.name||'#'+c.e)); c.lose = rvItem(c).type==='lose'; if(!c.lose) n[c.key]=(n[c.key]||0)+1; });
+  S.deck.forEach(c=>{ c.solo = c.lose || n[c.key]<2; });
+  S.pairs = Object.keys(n).reduce((t,k)=>t+Math.floor(n[k]/2),0);
 }
 function repaintReveal(){                 // refresh the insides in place (new picture or name) without closing any tile
   if(!S || S.mode!=='reveal') return;
+  rvKeys();
   rvArt.querySelectorAll('.card').forEach(el=>{ const c=S.deck[+el.dataset.i], h=rvItem(c).html; if(c.h!==h){ el.querySelector('.rfront').innerHTML=h; c.h=h; } });
 }
 function fitReveal(){                     // the artwork is 9:16; fit it whole inside the available area
   const k=Math.min(rv.clientWidth/ART.W, rv.clientHeight/ART.H); if(!k) return;
   rvArt.style.width=Math.floor(ART.W*k)+'px'; rvArt.style.height=Math.floor(ART.H*k)+'px';
+  const g=rvGrid(S&&S.mode==='reveal'?S.deck.length:RVBASE); rvArt.style.setProperty('--cs',(g[0].s*k)+'px');
 }
+/* Matching Game #2 – same rules as game #1, played on the artwork tiles:
+   flip two letters; a matching pair stays open, a wrong pair flips back. A "Better luck next time" tile (or any
+   tile without a partner) acts the moment it is flipped and stays open; as a second pick it ends the turn.
+   With "matched in pairs" switched off in the admin panel, every tile simply reveals when tapped. */
 rvArt.addEventListener('click',e=>{
   const el=e.target.closest('.card'); if(!el || !S || S.mode!=='reveal') return;
-  const i=+el.dataset.i, c=S.deck[i], it=rvItem(c), tag='tile '+tileLetter(i)+' ('+it.name+')';
+  const i=+el.dataset.i, c=S.deck[i], it=rvItem(c), tag='tile '+tileLetter(i)+' ('+it.name+')', F=CFG.flipMs;
   if(S.lock){ log('tap-ignored',tag+' · board busy'); return; }
-  const show=done=>{ $('#rvImg').innerHTML=it.html; $('#rvImg').setAttribute('aria-label',it.name); $('#rvTag').textContent=RVHEAD[it.type]; open('#ovRv',done); };
-  if(el.classList.contains('up')){          // an open tile can be tapped again to bring its pop-up back
-    if(!CFG.revealPopup){ log('tap-ignored',tag+' · already open'); return; }
-    S.lock=true; tone([440],.07,'triangle'); log('reveal-again',tag); show(()=>{ S.lock=false; }); return;
+  const popOK=!!CFG[c.lose?'rvLosePopup':'rvMatchPopup'];
+  const show=done=>{ $('#rvImg').innerHTML=it.html; $('#rvImg').setAttribute('aria-label',it.name); $('#rvTag').textContent=(CFG.rvMatch && !c.solo && it.type==='prize') ? "It's a match!" : RVHEAD[it.type]; open('#ovRv',done); };
+  const ended=()=>{ if(S.fin) return; if(CFG.rvMatch ? (S.pairs>0 && S.matches===S.pairs) : S.opened===S.deck.length){ S.fin=true; log('finish','matching game #2 · '+(CFG.rvMatch?'all '+S.pairs+' pairs found in '+S.turns+' turns':'all tiles open')); } };   // no end dialog: the round is restarted by hand
+  if(el.classList.contains('up')){          // a finished tile can be tapped again to bring its pop-up back
+    if(el.classList.contains('done') && popOK){ S.lock=true; tone([440],.07,'triangle'); log('reveal-again',tag); show(()=>{ S.lock=false; }); }
+    else log('tap-ignored',tag+' · already open');
+    return;
   }
-  el.classList.add('up'); S.opened++; S.lock=true; tone([440],.07,'triangle'); log('reveal',tag+' · '+S.opened+'/'+S.deck.length);
-  setTimeout(()=>{
-    if(it.type==='lose') tone([220,180],.14,'sawtooth'); else{ tone([523,659,784,1047],.13); burst('#4f74ff'); }
-    // no end-of-game dialog: when every tile is open the board simply stays, and the round is restarted by hand
-    const done=()=>{ S.lock=false; if(S.opened===S.deck.length) log('finish','reveal game · all tiles open'); };
-    if(CFG.revealPopup) show(done); else done();
-  },CFG.flipMs+80);
+  el.classList.add('up'); tone([440],.07,'triangle');
+
+  if(!CFG.rvMatch || c.solo){               // single tile: acts at once and stays open
+    S.lock=true; S.opened++; el.classList.add('done','sdone'); log(c.lose?'better-luck':'reveal',tag+(S.first?' · 2nd pick':''));
+    setTimeout(()=>{
+      if(c.lose) tone([220,180],.14,'sawtooth'); else{ tone([523,659,784,1047],.13); burst('#4f74ff'); }
+      const done=()=>{
+        const f=S.first;                    // picked second: the turn is over and the first tile goes back
+        if(f){ S.first=null; S.turns++; f.classList.remove('up'); log('turn-ended','tile '+tileLetter(+f.dataset.i)+' flipped back'); }
+        S.lock=false; ended();
+      };
+      if(popOK) show(done); else done();
+    },F+80);
+    return;
+  }
+  if(!S.first){ S.first=el; log('tap',tag+' · 1st pick'); return; }
+
+  const a=S.first, ca=S.deck[+a.dataset.i]; S.first=null; S.turns++; S.lock=true;
+  if(ca.key===c.key){
+    setTimeout(()=>{
+      a.classList.add('done'); el.classList.add('done'); S.matches++; S.opened+=2;
+      tone([523,659,784,1047],.13); burst('#4f74ff'); log('match',it.name+' · tiles '+tileLetter(+a.dataset.i)+'+'+tileLetter(i)+' · '+S.matches+'/'+S.pairs);
+      const done=()=>{ S.lock=false; ended(); };
+      if(popOK) show(done); else done();
+    },F+100);
+  }else{
+    a.classList.add('shake'); el.classList.add('shake'); log('mismatch','tiles '+tileLetter(+a.dataset.i)+'+'+tileLetter(i)+' · '+rvItem(ca).name+' vs '+it.name);
+    setTimeout(()=>tone([220,180],.12,'sawtooth'),F);
+    setTimeout(()=>{ a.classList.remove('up','shake'); el.classList.remove('up','shake'); S.lock=false; },F+CFG.mismatchMs);
+  }
 });
 
 function newGame(){
@@ -850,7 +893,7 @@ function finish(){
   NAME=''; drawName(); $('#eName').classList.toggle('hide',!ask); $('#eRest').classList.toggle('hide',ask);
 }
 function flipAllBack(){               // same tile positions, everything face-down again
-  if(S && S.mode==='reveal'){ closeOvs(); rvArt.querySelectorAll('.card').forEach(el=>el.classList.remove('up')); S.opened=0; S.lock=false; log('flip-all-back'); return; }
+  if(S && S.mode==='reveal'){ closeOvs(); rvArt.querySelectorAll('.card').forEach(el=>el.classList.remove('up','done','sdone','shake')); Object.assign(S,{opened:0,matches:0,turns:0,first:null,lock:false,fin:false}); log('flip-all-back'); return; }
   closeOvs();
   document.querySelectorAll('.card').forEach(el=>{ el.classList.remove('up','done','sdone','seen','shake'); paintSeen(el); });
   Object.assign(S,{first:null,lock:false,turns:0,matches:0,won:[],t0:0}); stats(); renderTray(); log('flip-all-back');
@@ -876,7 +919,7 @@ $('#bPlay').onclick  = ()=>{ tone([523,784],.1); chooser(true); };
 $('#modes').addEventListener('click',e=>{
   const b=e.target.closest('[data-mode]'); if(!b) return;
   const m=b.dataset.mode; if(CFG.mode!==m){ CFG.mode=m; save(); if(PANEL && $('#aSecs').childElementCount) buildAdmin(); }
-  $('#start').classList.add('off'); tone([523,784],.1); log('play',(m==='reveal'?'reveal':'matching')+' game chosen on this screen'); apply(); newGame();
+  $('#start').classList.add('off'); tone([523,784],.1); log('play','matching game #'+(m==='reveal'?2:1)+' chosen on this screen'); apply(); newGame();
 });
 
 /* ---------- host controls ----------
@@ -978,8 +1021,8 @@ function field(f){
     case 'color': return `<label class="c"><input type="color" data-k="${f.k}" ${f.s?'data-s':''} value="${v}">${f.l}</label>`;
     case 'coloron': return `<label class="c"><input type="checkbox" data-k="${f.on}" ${CFG[f.on]?'checked':''}><input type="color" data-k="${f.k}" value="${v}">${f.l}</label>`;
     case 'text': return `<label class="f"><span>${f.l}</span><input type="text" data-k="${f.k}" ${f.s?'data-s':''} value="${esc(v)}"></label>`;
-    case 'mode': return `<div class="row">${[['match','Matching game'],['reveal','Reveal game']].map(([m,l])=>`<button class="btn ${CFG.mode===m?'pri':''}" data-setmode="${m}" style="flex:1">${l}</button>`).join('')}</div>`;
-    case 'modenote': return `<div class="note">Players also choose the game on the start screen. The Reveal game uses the supplied artwork: ${ART.closed.length} lettered tiles, four across, so the layout, tile, product and surprise settings below apply to the Matching game only.</div>`;
+    case 'mode': return `<div class="row">${[['match','Matching Game #1'],['reveal','Matching Game #2']].map(([m,l])=>`<button class="btn ${CFG.mode===m?'pri':''}" data-setmode="${m}" style="flex:1">${l}</button>`).join('')}</div>`;
+    case 'modenote': return `<div class="note">Players also choose the game on the start screen. Matching Game #2 uses the supplied artwork: ${ART.closed.length} lettered tiles, four across, so the layout, tile, product and surprise settings below apply to the Matching game only.</div>`;
     case 'presets': return `<div class="presets">${PRESETS.map((p,i)=>`<button class="btn" data-preset="${i}">${p[0]}</button>`).join('')}</div>`;
     case 'layoutnote': return `<div class="note" id="aLayoutNote"></div>`;
     case 'screennote': return `<div class="note" id="aScreenNote"></div>`;
@@ -1098,7 +1141,7 @@ function net(text,cls){ const n=$('#netMsg'); if(!n) return; n.textContent=text;
 function pushCfg(){ post('api/config','PUT',{from:CID,cfg:CFG}).then(()=>msg('Saved to all screens')).catch(()=>msg('Could not reach the server')); }
 function takeCfg(cfg){                                  // settings arriving from the server
   const old=CFG; CFG=Object.assign(clone(DEFAULTS),cfg);
-  const rebuild=['mode','revealShuffle','seed','cols','rows','sur'].some(k=>old[k]!==CFG[k]) || (old.revealExtra||[]).length!==rvExtra().length || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
+  const rebuild=['mode','rvMatch','revealShuffle','seed','cols','rows','sur'].some(k=>old[k]!==CFG[k]) || (old.revealExtra||[]).length!==rvExtra().length || old.products.length!==CFG.products.length || old.surprises.length!==CFG.surprises.length;
   try{ localStorage.setItem(KEY,JSON.stringify(CFG)); }catch(e){}
   const a=document.activeElement, typing=a && a.closest && a.closest('.adm') && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
   if(document.body.classList.contains('admin') && !typing) buildAdmin(); else apply();

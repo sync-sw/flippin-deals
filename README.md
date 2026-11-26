@@ -11,34 +11,40 @@ offer. Single "surprise" tiles trigger a challenge, giveaway or reward.
 "Tap to play" on the start screen leads to a choice of game. The start screen is always a
 portrait 9:16 artboard, fitted whole to the screen.
 
-- **Matching game**: flip two tiles to find pairs; a pair unlocks that product's offer.
+- **Matching Game #1**: flip two tiles to find pairs; a pair unlocks that product's offer.
   Layout, tiles, products, surprises, scores and names all apply to this game.
-- **Reveal game**: 20 lettered tiles (A–T, five rows) in the supplied artwork. Tapping a letter flips
-  it to show what is behind it. Each of the 10 designs sits behind two letters, in the same
-  order as the supplied open-side artwork. An admin switch shuffles them instead, so the
-  order changes on every reshuffle. No scores are recorded. An open tile can be tapped
-  again to bring its pop-up back. There is no end-of-game dialog: when every tile is open the
-  board stays as it is until the round is restarted by hand (reset menu or admin panel).
+- **Matching Game #2**: the same matching rules on the supplied artwork, 20 lettered tiles
+  (A–T, five rows) hiding 10 designs, two of each.
+  - Flip two letters. A matching pair stays open with a green tick; a wrong pair flips back.
+  - A "Better luck next time" tile acts as soon as it is flipped and stays open. Picked
+    second, it ends the turn and the first tile flips back.
+  - Admin options: pop-up on a match (on/off), pop-up on a "Better luck" tile (on/off),
+    shuffle the designs (off = the artwork's order), and "tiles must be matched in pairs"
+    (off = every tile simply reveals when tapped, the earlier Reveal game).
+  - A finished tile can be tapped again to bring its pop-up back, if that pop-up is on.
+  - There is no end dialog and no score: when every pair is found the board stays as it
+    is until the round is restarted by hand (reset menu or admin panel).
 
-Extra Reveal rows: the admin panel ("Reveal game: extra tiles") can add up to four rows below
-the artwork's own tiles. The outside of each extra tile is the next letter (U, V, W, X, then Y…), typeset to
-match the artwork. The inside is a picture uploaded in the admin panel (a square PNG works
-best); it is shown on the tile and in the pop-up. Each extra tile also has a name and a type
-(prize, giveaway, challenge or better luck) that sets the pop-up label and sound. Extra rows
+Extra rows for game #2: the admin panel can add up to four rows below the artwork's own
+tiles. The outside of each extra tile is the next letter (U, V, W, X, then Y…), typeset to
+match. The inside is an uploaded picture (a square PNG works best), with a name and a type
+(prize, giveaway, challenge or better luck). Two extra tiles with the same picture form a
+pair; an extra tile with no partner acts at once, like a "Better luck" tile. Extra rows
 shrink every tile so the board still fits. Pictures are stored with the settings.
 
 The chosen game is a shared setting: with the control server, every screen and the admin
-preview switch together, and the admin page can switch games too.
+preview switch together, and the admin page can switch games too. Internally game #2 is
+still called `reveal` in the settings and the log.
 
 The artwork is embedded in `index.html` and comes from the designer's Illustrator file
-(`cards_1.ai`, the 26 Nov version): vector tiles with live text, a transparent logo and the gradient background.
-All game text and the tile lettering use the supplied Samsung SS Head Bold font, also
-embedded; the admin panel uses the system font. Neither source file is stored in this
-repository. The tile count, the order of the designs and their positions are read from the
-Illustrator file when the page is built, so a new version of the file only needs a rebuild.
+(`cards_1.ai`, the 26 Nov version): vector tiles with live text, a transparent logo and the
+gradient background. All game text and the tile lettering use the supplied Samsung SS Head
+Bold font, also embedded; the admin panel uses the system font. Neither source file is
+stored in this repository. The tile count, the order of the designs and their positions are
+read from the Illustrator file when the page is built.
 
-Tapping the top-left corner of the home screen, the game picker or the Reveal game hides or
-shows the top buttons; in the Matching game the same is done by tapping the title.
+Tapping the top-left corner of the home screen, the game picker or game #2 hides or shows
+the top buttons; in game #1 the same is done by tapping the title.
 
 ## Run
 
