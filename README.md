@@ -18,6 +18,13 @@ portrait 9:16 artboard, fitted whole to the screen.
   order as the supplied open-side artwork. An admin switch shuffles them instead, so the
   order changes on every reshuffle. No scores are recorded.
 
+Extra Reveal rows: the admin panel ("Reveal game: extra tiles") can add up to four rows below
+A–P. The outside of each extra tile is the next letter (Q, R, S, T, then U…), typeset to
+match the artwork. The inside is a picture uploaded in the admin panel (a square PNG works
+best); it is shown on the tile and in the pop-up. Each extra tile also has a name and a type
+(prize, giveaway, challenge or better luck) that sets the pop-up label and sound. Five rows
+fit at full size; more rows shrink every tile to fit. Pictures are stored with the settings.
+
 The chosen game is a shared setting: with the control server, every screen and the admin
 preview switch together, and the admin page can switch games too.
 
