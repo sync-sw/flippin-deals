@@ -262,11 +262,6 @@
   <div class="rvbig" id="rvImg" role="img"></div>
   <button class="cta" data-close>Continue</button>
 </div></div>
-<div class="ov" id="ovRvEnd"><div class="panel">
-  <span class="tag">All tiles revealed</span>
-  <h2>That's every tile on the board</h2>
-  <button class="cta" id="bRvAgain">Play again</button>
-</div></div>
 
 <div class="ov" id="ovDeal"><div class="panel">
   <span class="tag">It's a match · Black Friday offer</span>
@@ -651,16 +646,19 @@ rvArt.addEventListener('click',e=>{
   const el=e.target.closest('.card'); if(!el || !S || S.mode!=='reveal') return;
   const i=+el.dataset.i, c=S.deck[i], it=rvItem(c), tag='tile '+tileLetter(i)+' ('+it.name+')';
   if(S.lock){ log('tap-ignored',tag+' · board busy'); return; }
-  if(el.classList.contains('up')){ log('tap-ignored',tag+' · already open'); return; }
+  const show=done=>{ $('#rvImg').innerHTML=it.html; $('#rvImg').setAttribute('aria-label',it.name); $('#rvTag').textContent=RVHEAD[it.type]; open('#ovRv',done); };
+  if(el.classList.contains('up')){          // an open tile can be tapped again to bring its pop-up back
+    if(!CFG.revealPopup){ log('tap-ignored',tag+' · already open'); return; }
+    S.lock=true; tone([440],.07,'triangle'); log('reveal-again',tag); show(()=>{ S.lock=false; }); return;
+  }
   el.classList.add('up'); S.opened++; S.lock=true; tone([440],.07,'triangle'); log('reveal',tag+' · '+S.opened+'/'+S.deck.length);
   setTimeout(()=>{
     if(it.type==='lose') tone([220,180],.14,'sawtooth'); else{ tone([523,659,784,1047],.13); burst('#4f74ff'); }
-    const done=()=>{ S.lock=false; if(S.opened===S.deck.length){ log('finish','reveal game · all tiles open'); $('#ovRvEnd').classList.add('on'); } };
-    if(CFG.revealPopup){ $('#rvImg').innerHTML=it.html; $('#rvImg').setAttribute('aria-label',it.name); $('#rvTag').textContent=RVHEAD[it.type]; open('#ovRv',done); }   // no name line: the tile carries its own name
-    else done();
+    // no end-of-game dialog: when every tile is open the board simply stays, and the round is restarted by hand
+    const done=()=>{ S.lock=false; if(S.opened===S.deck.length) log('finish','reveal game · all tiles open'); };
+    if(CFG.revealPopup) show(done); else done();
   },CFG.flipMs+80);
 });
-$('#bRvAgain').onclick=()=>reseed();
 
 function newGame(){
   commitScore('');

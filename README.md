@@ -16,7 +16,9 @@ portrait 9:16 artboard, fitted whole to the screen.
 - **Reveal game**: 16 lettered tiles (A–P) in the supplied artwork. Tapping a letter flips
   it to show what is behind it. Each of the 8 designs sits behind two letters, in the same
   order as the supplied open-side artwork. An admin switch shuffles them instead, so the
-  order changes on every reshuffle. No scores are recorded.
+  order changes on every reshuffle. No scores are recorded. An open tile can be tapped
+  again to bring its pop-up back. There is no end-of-game dialog: when every tile is open the
+  board stays as it is until the round is restarted by hand (reset menu or admin panel).
 
 Extra Reveal rows: the admin panel ("Reveal game: extra tiles") can add up to four rows below
 A–P. The outside of each extra tile is the next letter (Q, R, S, T, then U…), typeset to
