@@ -21,7 +21,14 @@ portrait 9:16 artboard, fitted whole to the screen.
 The chosen game is a shared setting: with the control server, every screen and the admin
 preview switch together, and the admin page can switch games too.
 
-The artwork (background, logo, letter tiles, prize tiles) is embedded in `index.html`.
+The artwork is embedded in `index.html` and comes from the designer's Illustrator file
+(`cards.ai`): vector tiles with live text, a transparent logo and the gradient background.
+All game text and the tile lettering use the supplied Samsung SS Head Bold font, also
+embedded; the admin panel uses the system font. Neither source file is stored in this
+repository.
+
+Tapping the top-left corner of the home screen, the game picker or the Reveal game hides or
+shows the top buttons; in the Matching game the same is done by tapping the title.
 
 ## Run
 
