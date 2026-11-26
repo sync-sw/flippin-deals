@@ -13,28 +13,29 @@ portrait 9:16 artboard, fitted whole to the screen.
 
 - **Matching game**: flip two tiles to find pairs; a pair unlocks that product's offer.
   Layout, tiles, products, surprises, scores and names all apply to this game.
-- **Reveal game**: 16 lettered tiles (A–P) in the supplied artwork. Tapping a letter flips
-  it to show what is behind it. Each of the 8 designs sits behind two letters, in the same
+- **Reveal game**: 20 lettered tiles (A–T, five rows) in the supplied artwork. Tapping a letter flips
+  it to show what is behind it. Each of the 10 designs sits behind two letters, in the same
   order as the supplied open-side artwork. An admin switch shuffles them instead, so the
   order changes on every reshuffle. No scores are recorded. An open tile can be tapped
   again to bring its pop-up back. There is no end-of-game dialog: when every tile is open the
   board stays as it is until the round is restarted by hand (reset menu or admin panel).
 
 Extra Reveal rows: the admin panel ("Reveal game: extra tiles") can add up to four rows below
-A–P. The outside of each extra tile is the next letter (Q, R, S, T, then U…), typeset to
+the artwork's own tiles. The outside of each extra tile is the next letter (U, V, W, X, then Y…), typeset to
 match the artwork. The inside is a picture uploaded in the admin panel (a square PNG works
 best); it is shown on the tile and in the pop-up. Each extra tile also has a name and a type
-(prize, giveaway, challenge or better luck) that sets the pop-up label and sound. Five rows
-fit at full size; more rows shrink every tile to fit. Pictures are stored with the settings.
+(prize, giveaway, challenge or better luck) that sets the pop-up label and sound. Extra rows
+shrink every tile so the board still fits. Pictures are stored with the settings.
 
 The chosen game is a shared setting: with the control server, every screen and the admin
 preview switch together, and the admin page can switch games too.
 
 The artwork is embedded in `index.html` and comes from the designer's Illustrator file
-(`cards.ai`): vector tiles with live text, a transparent logo and the gradient background.
+(`cards_1.ai`, the 26 Nov version): vector tiles with live text, a transparent logo and the gradient background.
 All game text and the tile lettering use the supplied Samsung SS Head Bold font, also
 embedded; the admin panel uses the system font. Neither source file is stored in this
-repository.
+repository. The tile count, the order of the designs and their positions are read from the
+Illustrator file when the page is built, so a new version of the file only needs a rebuild.
 
 Tapping the top-left corner of the home screen, the game picker or the Reveal game hides or
 shows the top buttons; in the Matching game the same is done by tapping the title.
