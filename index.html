@@ -384,7 +384,7 @@ const DEFAULTS = {
   kicker:'Samsung Black Friday', title:'Flippin Deals',
   blurb:'Flip two tiles. Match a product to unlock its Black Friday offer. Watch out for surprise cards.',
   hint:'Match two tiles to reveal the first offer',
-  mode:'match', rvMatch:true, rvMatchPopup:true, rvLosePopup:true, revealShuffle:false, revealExtra:[],
+  mode:'match', rvMatch:true, rvMatchPopup:true, rvLosePopup:true, rvChallengePopup:true, revealShuffle:false, revealExtra:[],
   cols:4, rows:5, sur:4, seed:1, boardScale:100, boardY:50,
   uiAuto:true, uiScale:100, admScale:100, tileText:100, aspect:100, gap:10, radius:12, frame:'#c9d0de',
   symbol:'?', label:'Black Friday', labelFreq:20,
@@ -438,6 +438,7 @@ const FORM = [
     {t:'mode'},
     {g:2,k:'rvMatchPopup',t:'check',l:'Show a pop-up when a pair is matched'},
     {g:2,k:'rvLosePopup',t:'check',l:'Show a pop-up straight away on a “Better luck next time” tile'},
+    {g:2,k:'rvChallengePopup',t:'check',l:'Show a pop-up straight away on a “Challenge” tile'},
     {g:2,k:'revealShuffle',t:'check',l:'Shuffle what is behind each letter (off = same order as the artwork)',s:1},
     {g:2,k:'rvMatch',t:'check',l:'Tiles must be matched in pairs (off = every tile simply reveals when tapped)',s:1},
     {t:'modenote'},
@@ -638,10 +639,11 @@ function newReveal(){
 }
 function rvKeys(){                        // which tiles pair with which
   // Tiles from the artwork pair by design. Admin-added tiles pair when two of them carry the same picture (or the
-  // same name with no picture). "Better luck" tiles, and any tile with no partner, are singles: they act at once.
+  // same name with no picture). "Better luck" and "Challenge" tiles, and any tile with no partner, are singles:
+  // they are never a pair and act the moment they are flipped.
   const n={}, X=rvExtra();
-  S.deck.forEach(c=>{ const x=X[c.e]||{}; c.key = c.e===undefined ? 'k'+c.k : 'x'+(x.img || 'n:'+(x.name||'#'+c.e)); c.lose = rvItem(c).type==='lose'; if(!c.lose) n[c.key]=(n[c.key]||0)+1; });
-  S.deck.forEach(c=>{ c.solo = c.lose || n[c.key]<2; });
+  S.deck.forEach(c=>{ const x=X[c.e]||{}; c.key = c.e===undefined ? 'k'+c.k : 'x'+(x.img || 'n:'+(x.name||'#'+c.e)); const ty=rvItem(c).type; c.lose = ty==='lose'; c.chal = ty==='challenge'; if(!c.lose && !c.chal) n[c.key]=(n[c.key]||0)+1; });
+  S.deck.forEach(c=>{ c.solo = c.lose || c.chal || n[c.key]<2; });
   S.pairs = Object.keys(n).reduce((t,k)=>t+Math.floor(n[k]/2),0);
 }
 function repaintReveal(){                 // refresh the insides in place (new picture or name) without closing any tile
@@ -655,14 +657,14 @@ function fitReveal(){                     // the artwork is 9:16; fit it whole i
   const g=rvGrid(S&&S.mode==='reveal'?S.deck.length:RVBASE); rvArt.style.setProperty('--cs',(g[0].s*k)+'px');
 }
 /* Matching Game #2 – same rules as game #1, played on the artwork tiles:
-   flip two letters; a matching pair stays open, a wrong pair flips back. A "Better luck next time" tile (or any
-   tile without a partner) acts the moment it is flipped and stays open; as a second pick it ends the turn.
+   flip two letters; a matching pair stays open, a wrong pair flips back. A "Better luck next time" or "Challenge"
+   tile (or any tile without a partner) acts the moment it is flipped and stays open; as a second pick it ends the turn.
    With "matched in pairs" switched off in the admin panel, every tile simply reveals when tapped. */
 rvArt.addEventListener('click',e=>{
   const el=e.target.closest('.card'); if(!el || !S || S.mode!=='reveal') return;
   const i=+el.dataset.i, c=S.deck[i], it=rvItem(c), tag='tile '+tileLetter(i)+' ('+it.name+')', F=CFG.flipMs;
   if(S.lock){ log('tap-ignored',tag+' · board busy'); return; }
-  const popOK=!!CFG[c.lose?'rvLosePopup':'rvMatchPopup'];
+  const popOK=!!CFG[c.lose?'rvLosePopup':c.chal?'rvChallengePopup':'rvMatchPopup'];
   const show=done=>{ $('#rvImg').innerHTML=it.html; $('#rvImg').setAttribute('aria-label',it.name); $('#rvTag').textContent=(CFG.rvMatch && !c.solo && it.type==='prize') ? "It's a match!" : RVHEAD[it.type]; open('#ovRv',done); };
   const ended=()=>{ if(S.fin) return; if(CFG.rvMatch ? (S.pairs>0 && S.matches===S.pairs) : S.opened===S.deck.length){ S.fin=true; log('finish','matching game #2 · '+(CFG.rvMatch?'all '+S.pairs+' pairs found in '+S.turns+' turns':'all tiles open')); } };   // no end dialog: the round is restarted by hand
   if(el.classList.contains('up')){          // a finished tile can be tapped again to bring its pop-up back
@@ -673,7 +675,7 @@ rvArt.addEventListener('click',e=>{
   el.classList.add('up'); tone([440],.07,'triangle');
 
   if(!CFG.rvMatch || c.solo){               // single tile: acts at once and stays open
-    S.lock=true; S.opened++; el.classList.add('done','sdone'); log(c.lose?'better-luck':'reveal',tag+(S.first?' · 2nd pick':''));
+    S.lock=true; S.opened++; el.classList.add('done','sdone'); log(c.lose?'better-luck':c.chal?'challenge':'reveal',tag+(S.first?' · 2nd pick':''));
     setTimeout(()=>{
       if(c.lose) tone([220,180],.14,'sawtooth'); else{ tone([523,659,784,1047],.13); burst('#4f74ff'); }
       const done=()=>{
