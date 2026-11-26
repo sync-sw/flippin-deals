@@ -170,7 +170,7 @@
   .mode:active,.play:active{transform:scale(.97)}
   .mode b{display:block;font-size:calc(var(--sw)*.075);font-weight:900;line-height:1.05;color:var(--blue)}
   .mode span{display:block;margin-top:calc(var(--sw)*.014);font-size:calc(var(--sw)*.034);color:#3b4468}
-  .start .tools{position:absolute;right:4vmin;top:max(4vmin,env(safe-area-inset-top));display:flex;gap:var(--pad)}
+  .start .tools{position:absolute;z-index:3;right:4vmin;top:max(4vmin,env(safe-area-inset-top));display:flex;gap:var(--pad)}     /* above the artboard, which otherwise covers them on a 9:16 screen */
   canvas#fx{position:fixed;inset:0;z-index:15;pointer-events:none}
 
   /* ---------- admin drawer ---------- */
