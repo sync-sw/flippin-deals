@@ -252,7 +252,6 @@
 <div class="ov" id="ovRv"><div class="panel">
   <span class="tag" id="rvTag"></span>
   <img class="rvbig" id="rvImg" alt="">
-  <h2 id="rvName"></h2>
   <button class="cta" data-close>Continue</button>
 </div></div>
 <div class="ov" id="ovRvEnd"><div class="panel">
@@ -607,7 +606,7 @@ rvArt.addEventListener('click',e=>{
   setTimeout(()=>{
     if(it.type==='lose') tone([220,180],.14,'sawtooth'); else{ tone([523,659,784,1047],.13); burst('#4f74ff'); }
     const done=()=>{ S.lock=false; if(S.opened===S.deck.length){ log('finish','reveal game · all tiles open'); $('#ovRvEnd').classList.add('on'); } };
-    if(CFG.revealPopup){ $('#rvImg').src=ART.open[c.k]; $('#rvTag').textContent=RVHEAD[it.type]; $('#rvName').textContent=it.name; open('#ovRv',done); }
+    if(CFG.revealPopup){ $('#rvImg').src=ART.open[c.k]; $('#rvImg').alt=it.name; $('#rvTag').textContent=RVHEAD[it.type]; open('#ovRv',done); }   // no name line: the tile carries its own name
     else done();
   },CFG.flipMs+80);
 });
