@@ -312,7 +312,6 @@
   <div class="corner" id="sCorner" aria-hidden="true"></div>
   <div class="tools">
     <button class="ibtn" id="bFull2" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <button class="ibtn" id="bAdm2" aria-label="Hold for settings"><span class="fill"></span><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
   </div>
   <div class="sart" id="sArt"><div class="szone">
   <img class="slogo hide" id="sLogo" alt="">
@@ -341,21 +340,21 @@
       <button class="btn" id="aPlay" style="grid-column:1/-1">Start the game (leave start screen)</button>
     </div>
     <div id="aSecs"></div>
-    <details><summary>Matching Game #2: extra tiles</summary><div class="body">
+    <details data-g="2"><summary>Extra tiles</summary><div class="body">
       <div class="note" id="aRvNote"></div>
       <div id="aRvX" style="display:grid;gap:8px"></div>
       <div class="row"><button class="btn pri" id="aRvAdd" style="flex:1">+ Add a row (4 tiles)</button><button class="btn warn" id="aRvDel" style="flex:1">Remove last row</button></div>
     </div></details>
-    <details><summary>Products &amp; offers</summary><div class="body">
+    <details data-g="1"><summary>Products &amp; offers</summary><div class="body">
       <div class="note" id="aProdNote"></div>
       <div id="aProds" style="display:grid;gap:8px"></div>
       <button class="btn" id="aAddProd">+ Add product</button>
     </div></details>
-    <details><summary>Surprise cards</summary><div class="body">
+    <details data-g="1"><summary>Surprise cards</summary><div class="body">
       <div id="aSurs" style="display:grid;gap:8px"></div>
       <button class="btn" id="aAddSur">+ Add surprise</button>
     </div></details>
-    <details open><summary>High scores</summary><div class="body">
+    <details open data-g="1"><summary>High scores</summary><div class="body">
       <div class="best" id="aBest"></div>
       <div id="aScores"></div>
       <button class="btn warn" id="aClearScores">Clear all scores</button>
@@ -432,17 +431,18 @@ const ICONS = {
   book:'<rect x="9" y="9" width="30" height="21" rx="2"/><path d="M3 37h42l-4-6H7z"/>',
   box:'<path d="M6 14l18-8 18 8v20l-18 8-18-8z"/><path d="M6 14l18 8 18-8M24 22v20"/>',
 };
-/* admin form: [section, open?, fields]   s:1 = changing it deals a new board (grid size only) */
+/* admin form: [section, open?, game, fields]   game / g: 1 or 2 = shown only while that game is selected, 0 / none = both
+   s:1 = changing it deals a new board */
 const FORM = [
-  ['Game mode', true, [
+  ['Game mode', true, 0, [
     {t:'mode'},
-    {k:'rvMatchPopup',t:'check',l:'Game #2: show a pop-up when a pair is matched'},
-    {k:'rvLosePopup',t:'check',l:'Game #2: show a pop-up on a “Better luck next time” tile'},
-    {k:'revealShuffle',t:'check',l:'Game #2: shuffle what is behind each letter (off = same order as the artwork)',s:1},
-    {k:'rvMatch',t:'check',l:'Game #2: tiles must be matched in pairs (off = every tile simply reveals when tapped)',s:1},
+    {g:2,k:'rvMatchPopup',t:'check',l:'Show a pop-up when a pair is matched'},
+    {g:2,k:'rvLosePopup',t:'check',l:'Show a pop-up straight away on a “Better luck next time” tile'},
+    {g:2,k:'revealShuffle',t:'check',l:'Shuffle what is behind each letter (off = same order as the artwork)',s:1},
+    {g:2,k:'rvMatch',t:'check',l:'Tiles must be matched in pairs (off = every tile simply reveals when tapped)',s:1},
     {t:'modenote'},
   ]],
-  ['Layout', true, [
+  ['Layout', true, 1, [
     {k:'cols',t:'range',min:2,max:8,l:'Tiles across',s:1},
     {k:'rows',t:'range',min:2,max:8,l:'Tiles down',s:1},
     {t:'presets'},
@@ -450,21 +450,21 @@ const FORM = [
     {t:'layoutnote'},
     {k:'frame',t:'color',l:'Board frame colour'},
   ]],
-  ['Screen & scaling', true, [
+  ['Screen & scaling', true, 0, [
     {t:'screennote'},
-    {k:'boardScale',t:'range',min:30,max:100,u:'%',l:'Board size on screen'},
-    {k:'boardY',t:'range',min:0,max:100,step:5,u:'%',l:'Board position (0 = top, 100 = bottom)'},
-    {k:'tileText',t:'range',min:50,max:200,step:5,u:'%',l:'Text size on tiles'},
+    {g:1,k:'boardScale',t:'range',min:30,max:100,u:'%',l:'Board size on screen'},
+    {g:1,k:'boardY',t:'range',min:0,max:100,step:5,u:'%',l:'Board position (0 = top, 100 = bottom)'},
+    {g:1,k:'tileText',t:'range',min:50,max:200,step:5,u:'%',l:'Text size on tiles'},
     {k:'uiAuto',t:'check',l:'Auto-scale header, buttons and pop-ups to the screen'},
     {k:'uiScale',t:'range',min:50,max:400,step:5,u:'%',l:'Interface scale (when auto is off)',lazy:1},
     {k:'admScale',t:'range',min:50,max:400,step:5,u:'%',l:'Admin panel scale (when auto is off)',lazy:1},
   ]],
-  ['Tiles', false, [
+  ['Tiles', false, 1, [
     {k:'aspect',t:'range',min:60,max:180,step:5,u:'%',l:'Tile width (100% = square)'},
     {k:'gap',t:'range',min:0,max:40,u:'px',l:'Gap between tiles'},
     {k:'radius',t:'range',min:0,max:50,u:'%',l:'Corner rounding'},
   ]],
-  ['Tile backs & logo', false, [
+  ['Tile backs & logo', false, 1, [
     {k:'symbol',t:'text',l:'Symbol or word on tile backs'},
     {k:'label',t:'text',l:'Alternate label on some tiles'},
     {k:'labelFreq',t:'range',min:0,max:100,step:5,u:'%',l:'How many tiles show the alternate label'},
@@ -475,29 +475,29 @@ const FORM = [
     {k:'logoBacks',t:'check',l:'Show logo on tile backs instead of the symbol'},
     {k:'logoHeader',t:'check',l:'Show logo in header and start screen'},
   ]],
-  ['Animation & behaviour', false, [
+  ['Animation & behaviour', false, 0, [
     {k:'flipMs',t:'range',min:100,max:1500,step:50,u:'ms',l:'Flip speed (lower = faster)'},
     {k:'mismatchMs',t:'range',min:300,max:5000,step:100,u:'ms',l:'How long a wrong pair stays open'},
-    {k:'seenMode',t:'check',l:'Tiles come back a different colour once they have been opened'},
-    {k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
-    {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close offer pop-ups (0 = wait for tap)'},
-    {k:'askName',t:'check',l:'Ask players for their name after clearing the board (they can skip)'},
+    {g:1,k:'seenMode',t:'check',l:'Tiles come back a different colour once they have been opened'},
+    {g:1,k:'seenColor',t:'color',l:'Colour for already-opened tiles'},
+    {k:'autoClose',t:'range',min:0,max:20,u:'s',l:'Auto-close pop-ups (0 = wait for tap)'},
+    {g:1,k:'askName',t:'check',l:'Ask players for their name after clearing the board (they can skip)'},
     {k:'holdLock',t:'check',l:'Kiosk lock: the reset button on game screens needs a 1-second press-and-hold'},
     {k:'hideBtns',t:'check',l:'Hide the top buttons (tapping the top-left corner shows or hides them)'},
     {k:'confetti',t:'check',l:'Confetti'},
-    {k:'showStats',t:'check',l:'Show matches / turns counters'},
-    {k:'showTray',t:'check',l:'Show unlocked-offers strip'},
+    {g:1,k:'showStats',t:'check',l:'Show matches / turns counters'},
+    {g:1,k:'showTray',t:'check',l:'Show unlocked-offers strip'},
   ]],
-  ['Audio', false, [
+  ['Audio', false, 0, [
     {k:'sound',t:'check',l:'Sound effects on game screens'},
     {k:'volume',t:'range',min:0,max:100,step:5,u:'%',l:'Volume'},
     {t:'testsound'},
   ]],
-  ['Titles & text', false, [
-    {k:'kicker',t:'text',l:'Small heading'},
-    {k:'title',t:'text',l:'Game title'},
+  ['Titles & text', false, 0, [
+    {g:1,k:'kicker',t:'text',l:'Small heading'},
+    {g:1,k:'title',t:'text',l:'Game title'},
     {k:'blurb',t:'text',l:'Start screen instructions'},
-    {k:'hint',t:'text',l:'Instruction above the board (until the first match)'},
+    {g:1,k:'hint',t:'text',l:'Instruction above the board (until the first match)'},
   ]],
 ];
 /* ===================================================================== */
@@ -956,9 +956,8 @@ document.querySelector('.brand').addEventListener('click',e=>{ if(e.target.close
 $('#gCorner').addEventListener('click',toggleBtns);      // reveal game: the title is not drawn, so the same top-left corner area is used
 $('#sCorner').addEventListener('click',toggleBtns);      // same gesture on the home screen and the game picker
 press($('#bHome'),resetMenu);
-// standalone only: settings always need a 1-second press-and-hold (both buttons are removed when a server is present)
+// standalone only: the settings button is in the game header, so it appears once a game has been chosen; it always needs a 1-second hold
 press($('#bAdm'),()=>admin(!document.body.classList.contains('admin')),true);
-press($('#bAdm2'),()=>{ $('#start').classList.add('off'); admin(true); },true);
 document.addEventListener('contextmenu',e=>{ if(!e.target.closest('.adm')) e.preventDefault(); });
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
@@ -1010,7 +1009,9 @@ $('#aPlay').onclick    = ()=>send('play');
 function changed(deal){ if(deal) CFG.seed=newSeed(); save(); apply(); if(deal){ closeOvs(); newGame(); } }   // deal = grid changed, so a new board is needed
 
 function buildAdmin(){
-  $('#aSecs').innerHTML = FORM.map(([name,open,fields])=>`<details ${open?'open':''}><summary>${name}</summary><div class="body">${fields.map(field).join('')}</div></details>`).join('');
+  const gno=CFG.mode==='reveal'?2:1, mine=x=>!x||x===gno;      // admin shows the selected game's settings only
+  $('#aSecs').innerHTML = FORM.filter(([,,g])=>mine(g)).map(([name,open,g,fields])=>{ const f=fields.filter(x=>mine(x.g)); return f.length?`<details ${open?'open':''}><summary>${name}</summary><div class="body">${f.map(field).join('')}</div></details>`:''; }).join('');
+  document.querySelectorAll('.adm details[data-g]').forEach(d=>d.classList.toggle('hide',+d.dataset.g!==gno));
   renderProds(); renderSurs(); renderRvX(); apply();
 }
 function field(f){
@@ -1022,7 +1023,7 @@ function field(f){
     case 'coloron': return `<label class="c"><input type="checkbox" data-k="${f.on}" ${CFG[f.on]?'checked':''}><input type="color" data-k="${f.k}" value="${v}">${f.l}</label>`;
     case 'text': return `<label class="f"><span>${f.l}</span><input type="text" data-k="${f.k}" ${f.s?'data-s':''} value="${esc(v)}"></label>`;
     case 'mode': return `<div class="row">${[['match','Matching Game #1'],['reveal','Matching Game #2']].map(([m,l])=>`<button class="btn ${CFG.mode===m?'pri':''}" data-setmode="${m}" style="flex:1">${l}</button>`).join('')}</div>`;
-    case 'modenote': return `<div class="note">Players also choose the game on the start screen. Matching Game #2 uses the supplied artwork: ${ART.closed.length} lettered tiles, four across, so the layout, tile, product and surprise settings below apply to the Matching game only.</div>`;
+    case 'modenote': return `<div class="note">Only the settings for the selected game are listed below. Switch game here to see the other game’s settings; players also choose the game on the start screen.${CFG.mode==='reveal'?' Matching Game #2 uses the supplied artwork: '+ART.closed.length+' lettered tiles, four across.':''}</div>`;
     case 'presets': return `<div class="presets">${PRESETS.map((p,i)=>`<button class="btn" data-preset="${i}">${p[0]}</button>`).join('')}</div>`;
     case 'layoutnote': return `<div class="note" id="aLayoutNote"></div>`;
     case 'screennote': return `<div class="note" id="aScreenNote"></div>`;
@@ -1229,7 +1230,7 @@ apply();
 log('page-loaded',innerWidth+'×'+innerHeight+' · '+(/Chrom(?:e|ium)\/(\d+)/.exec(navigator.userAgent)||['browser'])[0]);
 if(SERVER) connect(); else local();
 if(SERVER){                                // options are on /admin only: strip the in-page entry points
-  ['#bAdm','#bAdm2','#aClose'].forEach(q=>$(q).remove());
+  ['#bAdm','#aClose'].forEach(q=>$(q).remove());
   if(ADMIN){ $('#start').classList.add('off'); admin(true); document.title='Flippin Deals – Admin'; }
   else $('#adm').remove();
 }else{                                     // standalone: one device, so drop the multi-screen controls

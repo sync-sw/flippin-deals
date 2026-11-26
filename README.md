@@ -16,8 +16,9 @@ portrait 9:16 artboard, fitted whole to the screen.
 - **Matching Game #2**: the same matching rules on the supplied artwork, 20 lettered tiles
   (A–T, five rows) hiding 10 designs, two of each.
   - Flip two letters. A matching pair stays open with a green tick; a wrong pair flips back.
-  - A "Better luck next time" tile acts as soon as it is flipped and stays open. Picked
-    second, it ends the turn and the first tile flips back.
+  - The two "Better luck next time" tiles are never a pair: each one shows its pop-up the
+    moment it is flipped and stays open. Picked second, it ends the turn and the first
+    tile flips back.
   - Admin options: pop-up on a match (on/off), pop-up on a "Better luck" tile (on/off),
     shuffle the designs (off = the artwork's order), and "tiles must be matched in pairs"
     (off = every tile simply reveals when tapped, the earlier Reveal game).
@@ -42,6 +43,9 @@ gradient background. All game text and the tile lettering use the supplied Samsu
 Bold font, also embedded; the admin panel uses the system font. Neither source file is
 stored in this repository. The tile count, the order of the designs and their positions are
 read from the Illustrator file when the page is built.
+
+The admin panel lists only the settings of the selected game; switching game in the panel
+switches the list.
 
 Tapping the top-left corner of the home screen, the game picker or game #2 hides or shows
 the top buttons; in game #1 the same is done by tapping the title.
@@ -73,7 +77,8 @@ change the game. Keep it on a private network, or put it behind something that r
 
 **Standalone (static hosting such as Vercel, or the file opened directly).** There is no
 server, so the options panel is inside the game page: press and hold the settings button
-(sliders icon, top right of the start screen and of the game header) for 1 second. "Done"
+(sliders icon, top right of the game header) for 1 second. The button appears once a game
+has been chosen; the start screen and the game picker only have the full-screen button. "Done"
 closes it. Settings, high scores and the event log stay in that device's browser, and there
 is no remote control. Deploying is just serving `index.html`; `server.js` is not used.
 
